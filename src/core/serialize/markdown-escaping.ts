@@ -4,33 +4,62 @@
  * Goal: the rendered Markdown preserves the source's visible text without
  * over-escaping ordinary characters. Markdown escaping is a rendering
  * fidelity concern, NOT a prompt-injection defense (see ADR-001).
+ *
+ * Design rules (Final QA L-01 / L-02 / L-03):
+ * - Only characters that can actually change rendering are escaped, and only
+ *   in positions where they can. CommonMark does not treat an underscore or
+ *   asterisk inside a word as emphasis, so `insert_content_list` and
+ *   `llm_model*` stay readable instead of becoming `insert\_content\_list`.
+ * - Parentheses carry no special meaning in ordinary text, so they are never
+ *   escaped here (link and image destinations have their own escaper). The
+ *   previous asymmetry — escaping ")" but never "(" — produced broken-looking
+ *   prose such as `least privilege\)`.
+ * - Human-facing text (titles, headings) must not gain escapes that show up in
+ *   copied output, so brackets only escape where a link could actually start.
  */
+
+/** Explicit escapes: always safe to escape, no readability cost. */
+const ALWAYS_ESCAPED = /([\\`])/g;
+
+/**
+ * Emphasis characters that are NOT intraword. CommonMark cannot open or close
+ * emphasis inside a word, so `snake_case`, `a*b`, `max_parallel_insert=12` and
+ * `llm_model_func` stay readable. Anything else (line start, after a space,
+ * before punctuation, end of line) can start or end real emphasis and is
+ * escaped.
+ */
+const EMPHASIS_NOT_INTRAWORD = /(^|[^0-9A-Za-z])([*_])|([*_])(?![0-9A-Za-z])/g;
+const LINK_OPENER = /\[/g;
 
 /** Escape inline special characters in ordinary semantic text. */
 export function escapeMarkdownText(text: string): string {
-  return text
-    .split("\n")
-    .map(escapeMarkdownLine)
-    .join("\n");
+  return text.split("\n").map(escapeMarkdownLine).join("\n");
 }
 
 function escapeMarkdownLine(line: string): string {
-  let result = line
-    .replace(/\\/g, "\\\\")
-    .replace(/([*_`[\])])/g, "\\$1");
-  // Protect block-level prefixes so plain text cannot turn into Markdown
-  // structure (headings, blockquotes, lists, ordered lists).
-  result = result.replace(/^(\s*)(#{1,6})(\s)/, "$1\\$2$3");
-  result = result.replace(/^(\s*)(>)(\s)/, "$1\\$2$3");
-  result = result.replace(/^(\s*)([-+*])(\s)/, "$1\\$2$3");
-  result = result.replace(/^(\s*)(\d+)(\.)(\s)/, "$1$2\\.$4");
-  return result;
+  // Block-level prefixes are escaped LAST: the structural backslash must not be
+  // doubled by the general backslash pass, and the prefix backslashes are
+  // inserted directly so they stay single.
+  const result = line
+    .replace(ALWAYS_ESCAPED, "\\$1")
+    .replace(EMPHASIS_NOT_INTRAWORD, (_match, boundary, atStart, atEnd) =>
+      atStart !== undefined
+        ? `${boundary}\\${atStart}`
+        : `${boundary === undefined ? "" : boundary}\\${atEnd}`,
+    )
+    .replace(LINK_OPENER, "\\[");
+  let prefixed = result.replace(/^(\s*)(#{1,6})(\s)/, "$1\\$2$3");
+  prefixed = prefixed.replace(/^(\s*)(>)(\s)/, "$1\\$2$3");
+  prefixed = prefixed.replace(/^(\s*)([-+])(\s)/, "$1\\$2$3");
+  prefixed = prefixed.replace(/^(\s*)(\d+)(\.)(\s)/, "$1$2\\.$4");
+  return prefixed;
 }
 
 /**
  * Escape a Markdown link/image destination. URLs in the domain are already
  * normalized and safe; here we only handle Markdown syntax characters so
- * query strings and fragments are never altered.
+ * query strings and fragments are never altered. Destinations are delimited by
+ * parentheses, so BOTH sides must be escaped — unlike ordinary text above.
  */
 export function escapeMarkdownUrl(url: string): string {
   return url.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");

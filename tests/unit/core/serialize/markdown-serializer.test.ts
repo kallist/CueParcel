@@ -53,10 +53,13 @@ describe("serializeContentBlocks", () => {
     ).toBe("- [x] done\n- [ ] pending\n");
   });
 
-  it("escapes non-marker brackets inside list items", () => {
+  it("escapes the link-opening bracket inside list items", () => {
+    // Only "[" can open a link reference, so only it is escaped; a bare "]"
+    // has no Markdown meaning and escaping it produced noisy output
+    // (Final QA L-01).
     expect(
       serializeContentBlocks([{ type: "list", ordered: false, items: ["array[x] value"] }]),
-    ).toBe("- array\\[x\\] value\n");
+    ).toBe("- array\\[x] value\n");
   });
 
   it("serializes links with escaped text and preserved URLs", () => {
@@ -64,7 +67,7 @@ describe("serializeContentBlocks", () => {
       serializeContentBlocks([
         { type: "link", href: "https://example.com/a(b)?q=1", text: "docs [x]" },
       ]),
-    ).toBe("[docs \\[x\\]](https://example.com/a\\(b\\)?q=1)\n");
+    ).toBe("[docs \\[x]](https://example.com/a\\(b\\)?q=1)\n");
   });
 
   it("serializes images with alt, title and escaping", () => {

@@ -77,6 +77,9 @@ function serializeCodeBlock(block: CodeBlock): string {
   return `${openingLine}\n${block.code}\n${fence}`;
 }
 
+/** Continuation indent used for wrapped or multi-line list item content. */
+const LIST_CONTINUATION_INDENT = " ".repeat(3);
+
 function serializeListItem(item: string, ordered: boolean, index: number): string {
   const prefix = ordered ? `${index + 1}. ` : "- ";
   const markerMatch = TASK_LIST_MARKER.exec(item);
@@ -85,7 +88,17 @@ function serializeListItem(item: string, ordered: boolean, index: number): strin
     const marker = markerMatch[0];
     return `${prefix}${marker}${escapeMarkdownText(item.slice(marker.length))}`;
   }
-  return `${prefix}${escapeMarkdownText(item)}`;
+  // Multi-line item content (whitespace-significant source) keeps its line
+  // structure as Markdown continuation lines, so the list numbering is never
+  // reset and the original layout survives.
+  return item
+    .split("\n")
+    .map((line, lineIndex) =>
+      lineIndex === 0
+        ? `${prefix}${escapeMarkdownText(line)}`
+        : `${LIST_CONTINUATION_INDENT}${escapeMarkdownText(line)}`,
+    )
+    .join("\n");
 }
 
 function serializeImageBlock(block: Extract<ContentBlock, { type: "image" }>): string {

@@ -7,12 +7,15 @@ import {
 } from "../../../../src/core/serialize";
 
 describe("escapeMarkdownText", () => {
-  it("escapes backslashes, asterisks, underscores, backticks and brackets", () => {
+  it("escapes backslashes, backticks and emphasis on word boundaries", () => {
     expect(escapeMarkdownText("a\\b")).toBe("a\\\\b");
     expect(escapeMarkdownText("*bold*")).toBe("\\*bold\\*");
     expect(escapeMarkdownText("_under_")).toBe("\\_under\\_");
     expect(escapeMarkdownText("`code`")).toBe("\\`code\\`");
-    expect(escapeMarkdownText("[docs]")).toBe("\\[docs\\]");
+  });
+
+  it("escapes only the bracket that can open a link", () => {
+    expect(escapeMarkdownText("[docs]")).toBe("\\[docs]");
   });
 
   it("never breaks Windows paths", () => {
@@ -43,7 +46,53 @@ describe("escapeMarkdownText", () => {
 
   it("leaves mid-line markers untouched", () => {
     expect(escapeMarkdownText("a - b # c")).toBe("a - b # c");
-    expect(escapeMarkdownText("value [1] x")).toBe("value \\[1\\] x");
+    expect(escapeMarkdownText("value [1] x")).toBe("value \\[1] x");
+  });
+});
+
+// Final QA L-01 / L-02 / L-03: escaping must not damage ordinary prose or
+// human-facing text.
+describe("escapeMarkdownText — prose fidelity (Final QA L-01/L-02/L-03)", () => {
+  it("never escapes parentheses in ordinary text", () => {
+    // Was: "…cleanup\\)" — an unmatched escape that looked broken in output.
+    const source = "least privilege (single shadow-root host; cleanup)";
+    expect(escapeMarkdownText(source)).toBe(source);
+    expect(escapeMarkdownText(source)).not.toContain("\\");
+  });
+
+  it("keeps identifier underscores readable inside a word", () => {
+    // Was: "insert\\_content\\_list", "llm\\_model\\_max\\_async".
+    const source = "insert_content_list and llm_model_max_async=16 and max_parallel_insert=12";
+    expect(escapeMarkdownText(source)).toBe(source);
+  });
+
+  it("keeps intraword asterisks readable", () => {
+    expect(escapeMarkdownText("glob *.md and a*b")).toBe("glob \\*.md and a*b");
+  });
+
+  it("still escapes real emphasis at word boundaries", () => {
+    expect(escapeMarkdownText("this is _emphasised_ text")).toBe(
+      "this is \\_emphasised\\_ text",
+    );
+    expect(escapeMarkdownText("this is *emphasised* text")).toBe(
+      "this is \\*emphasised\\* text",
+    );
+  });
+
+  it("does not escape human-facing titles into unreadable text", () => {
+    // Was: "This \\[Bug\\]:Image-heavy pages …"
+    expect(escapeMarkdownText("This [Bug]:Image-heavy pages take 100s+ to ingest")).toBe(
+      "This \\[Bug]:Image-heavy pages take 100s+ to ingest",
+    );
+  });
+
+  it("preserves a Markdown-unambiguous version string", () => {
+    const source = "RAGAnything + lightrag-hku 1.4.16, gpt-4o-mini (vision)";
+    expect(escapeMarkdownText(source)).toBe(source);
+  });
+
+  it("keeps multi-line text line-structured while escaping", () => {
+    expect(escapeMarkdownText("a=1\nb=2\n- not a list")).toBe("a=1\nb=2\n\\- not a list");
   });
 });
 
