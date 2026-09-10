@@ -69,12 +69,16 @@ export const PR_AUTHOR_SELECTORS = [
   "a.author",
 ] as const;
 
-/** PR creation time — description header relative-time first. */
+/**
+ * PR creation time — description header relative-time first. Only elements
+ * exposing a real `datetime` attribute are usable.
+ */
 export const PR_CREATED_TIME_SELECTORS = [
   '[data-testid="pr-description"] relative-time',
   "div.js-timeline-item relative-time",
   "div.js-timeline-item time",
   "div.gh-header-meta relative-time",
+  "relative-time",
 ] as const;
 
 /** PR labels container (issue/PR share the sidebar Labels UI). */

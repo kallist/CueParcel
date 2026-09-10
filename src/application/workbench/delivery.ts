@@ -30,6 +30,16 @@ export const SCOPE_LABELS: Record<TaskSpecSource["scope"], string> = {
   text_selection: "Text selection",
 };
 
+/** Capture-method labels (orthogonal to the semantic adapter — M-01). */
+export const CAPTURE_METHOD_LABELS: Record<
+  NonNullable<TaskSpecSource["captureMethod"]>,
+  string
+> = {
+  full_page: "Full page",
+  context_lens: "Context Lens",
+  text_selection: "Text selection",
+};
+
 export function serializeAgentContext(spec: TaskSpec): string {
   const sections: string[] = [];
 
@@ -87,9 +97,14 @@ function serializeSourceBlock(source: TaskSpecSource, index: number): string {
   if (source.adapter !== undefined) {
     meta.push(`Adapter: ${source.adapter.name}`);
   }
+  // Type = what the source is, Capture = how it was obtained, Scope = how much.
+  // Three separate lines so the dimensions can never be conflated (M-01).
+  if (source.captureMethod !== undefined) {
+    meta.push(`Capture: ${CAPTURE_METHOD_LABELS[source.captureMethod]}`);
+  }
   meta.push(`URL: ${source.url}`);
   meta.push(`Captured At: ${source.capturedAt}`);
-  meta.push(`Capture: ${SCOPE_LABELS[source.scope]}`);
+  meta.push(`Scope: ${SCOPE_LABELS[source.scope]}`);
   if (source.selection !== undefined && source.selection.labels.length > 0) {
     meta.push(`Selection: ${source.selection.labels.join(" · ")}`);
   }

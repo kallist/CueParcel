@@ -19,6 +19,7 @@ import {
 import type {
   ContentBlock,
   DocumentAdapterId,
+  DocumentCaptureMethod,
   NormalizedDocument,
   SourceDescriptor,
 } from "../../core";
@@ -29,7 +30,14 @@ export interface SelectionDocumentInput {
   url: string;
   capturedAt: string;
   title: string;
+  /**
+   * Semantic adapter of the page the fragment came from ("what the page IS").
+   * It is resolved by the caller through the same registry priority as a
+   * full-page capture, so cropping a GitHub Issue keeps GitHub Issue identity
+   * (Final QA M-01) instead of being relabelled by the capture method.
+   */
   adapterId: DocumentAdapterId;
+  method: DocumentCaptureMethod;
   scope: "selection" | "text-selection";
   blocks: ContentBlock[];
 }
@@ -84,6 +92,7 @@ export function buildSelectionDocument(input: SelectionDocumentInput): Normalize
         id: input.adapterId,
         name: DOCUMENT_ADAPTER_NAMES[input.adapterId],
       },
+      method: input.method,
       scope: input.scope,
     },
   };

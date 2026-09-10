@@ -122,6 +122,7 @@ export class GitHubIssueExtractor implements PageExtractor {
       assets: collectAssetsFromBlocks(blocks),
       capture: {
         adapter: { id: "github-issue", name: "GitHub Issue" },
+        method: "full-page",
         scope: "full-page",
       },
     };
@@ -183,20 +184,23 @@ function resolveAuthor(sourceDocument: Document): string | undefined {
   return undefined;
 }
 
+/**
+ * Issue creation time.
+ *
+ * Only a real <time>/<relative-time> `datetime` attribute is accepted: the
+ * VISIBLE text of those elements is a rendered phrase ("on Aug 28, 2026",
+ * "Last edited by …"), and previously the fallback to textContent made the
+ * result depend on which element happened to match first — it produced an
+ * ISO string on one run and a phrase on the next. A source fact must be
+ * deterministic and machine-consumable, so the text fallback is gone.
+ */
 function resolvePublishedAt(sourceDocument: Document): string | undefined {
   for (const selector of ISSUE_CREATED_TIME_SELECTORS) {
-    const element = sourceDocument.querySelector(selector);
-    if (element === null) {
-      continue;
-    }
-    const candidate = normalizeInlineText(
-      element.getAttribute("datetime") ?? element.textContent ?? "",
-    );
-    // Accept only a real timestamp: the rendered phrase that GitHub sometimes
-    // exposes ("on Aug 28, 2026") parses in V8 but is not a machine-consumable
-    // source fact, and must never reach the domain.
-    if (isIsoDateTimeString(candidate)) {
-      return candidate;
+    for (const element of sourceDocument.querySelectorAll(selector)) {
+      const datetime = element.getAttribute("datetime");
+      if (datetime !== null && isIsoDateTimeString(datetime)) {
+        return datetime;
+      }
     }
   }
   return undefined;

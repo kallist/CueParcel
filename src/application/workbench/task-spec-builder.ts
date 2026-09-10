@@ -31,6 +31,7 @@ import {
 import type {
   ContextCart,
   ContextSourceItem,
+  DocumentCaptureMethod,
   NormalizedDocument,
   RecipeId,
   TaskSpec,
@@ -64,6 +65,16 @@ const ITEM_SCOPE_TO_TASK_SCOPE: Record<
 > = {
   "full-page": "full_page",
   selection: "selected_sections",
+  "text-selection": "text_selection",
+};
+
+/** Document capture methods → JSON capture-method vocabulary (M-01). */
+const DOCUMENT_METHOD_TO_TASK_METHOD: Record<
+  DocumentCaptureMethod,
+  NonNullable<TaskSpecSource["captureMethod"]>
+> = {
+  "full-page": "full_page",
+  "context-lens": "context_lens",
   "text-selection": "text_selection",
 };
 
@@ -184,6 +195,10 @@ function buildSource(item: ContextSourceItem, isPrimary: boolean): TaskSpecSourc
   };
   if (item.adapter !== undefined) {
     source.adapter = { id: item.adapter.id, name: item.adapter.name };
+  }
+  const method = item.method ?? item.document.capture?.method;
+  if (method !== undefined) {
+    source.captureMethod = DOCUMENT_METHOD_TO_TASK_METHOD[method];
   }
   const sourceFacts = resolveSourceFacts(document);
   if (sourceFacts !== undefined) {

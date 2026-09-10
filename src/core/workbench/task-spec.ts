@@ -46,6 +46,18 @@ export const TASK_SPEC_SCOPES = ["full_page", "selected_sections", "text_selecti
 export type TaskSpecSourceScope = (typeof TASK_SPEC_SCOPES)[number];
 
 /**
+ * How the source content was obtained. Orthogonal to the semantic adapter:
+ * a GitHub Issue read in full and a GitHub Issue cropped with Context Lens both
+ * keep `adapter: github-issue` and differ only here (Final QA M-01).
+ */
+export const TASK_SPEC_CAPTURE_METHODS = [
+  "full_page",
+  "context_lens",
+  "text_selection",
+] as const;
+export type TaskSpecCaptureMethod = (typeof TASK_SPEC_CAPTURE_METHODS)[number];
+
+/**
  * Specialized, adapter-verified source facts (Final QA M-02).
  *
  * A downstream consumer must not have to re-parse the URL to learn the issue
@@ -80,6 +92,8 @@ export interface TaskSpecSource {
   isPrimary: boolean;
   /** JSON-scope naming: full_page / selected_sections / text_selection. */
   scope: TaskSpecSourceScope;
+  /** JSON-method naming: full_page / context_lens / text_selection. */
+  captureMethod?: TaskSpecCaptureMethod;
   adapter?: { id: string; name: string };
   /** Adapter-verified semantic facts about the page (never re-derived). */
   sourceFacts?: TaskSpecSourceFacts;
@@ -145,6 +159,7 @@ const SOURCE_KEYS = [
   "role",
   "isPrimary",
   "scope",
+  "captureMethod",
   "adapter",
   "sourceFacts",
   "selection",
@@ -198,6 +213,13 @@ function isTaskSpecSourceType(value: unknown): value is TaskSpecSourceType {
 
 function isTaskSpecScope(value: unknown): value is TaskSpecSourceScope {
   return typeof value === "string" && (TASK_SPEC_SCOPES as readonly string[]).includes(value);
+}
+
+function isTaskSpecCaptureMethod(value: unknown): value is TaskSpecCaptureMethod {
+  return (
+    typeof value === "string" &&
+    (TASK_SPEC_CAPTURE_METHODS as readonly string[]).includes(value)
+  );
 }
 
 function isSmallStringArray(value: unknown, max: number): boolean {
@@ -281,6 +303,12 @@ export function isTaskSpecSource(value: unknown): value is TaskSpecSource {
     return false;
   }
   if (value.scope !== "full_page" && value.selection === undefined) {
+    return false;
+  }
+  if (
+    value.captureMethod !== undefined &&
+    !isTaskSpecCaptureMethod(value.captureMethod)
+  ) {
     return false;
   }
   if (

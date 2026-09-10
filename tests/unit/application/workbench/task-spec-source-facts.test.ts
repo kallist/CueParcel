@@ -38,6 +38,7 @@ function makeGitHubPullRequestDocument(
     assets: [],
     capture: {
       adapter: { id: "github-pull-request", name: "GitHub Pull Request" },
+      method: "full-page",
       scope: "full-page",
     },
     ...overrides,

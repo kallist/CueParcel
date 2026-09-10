@@ -111,7 +111,9 @@ describe("lens controller — content script side", () => {
     expect(isNormalizedDocument(materialization!.document)).toBe(true);
     expect(materialization!.document.source.kind).toBe("web");
     expect(materialization!.document.capture).toEqual({
-      adapter: { id: "context-lens", name: "Context Lens" },
+      // M-01: semantic adapter preserved, capture method recorded separately.
+      adapter: { id: "generic-article", name: "Generic Article" },
+      method: "context-lens",
       scope: "selection",
     });
     expect(materialization!.regions[0].label).toBe("Section A");

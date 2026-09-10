@@ -29,7 +29,11 @@ describe("createCandidateContextItem", () => {
 
   it("keeps selection metadata when the document is a pick fragment", () => {
     const document = makeWebDocument({
-      capture: { adapter: { id: "context-lens", name: "Context Lens" }, scope: "selection" },
+      capture: {
+        adapter: { id: "generic-article", name: "Generic Article" },
+        method: "context-lens",
+        scope: "selection",
+      },
     });
     const candidate = createCandidateContextItem(document, {
       captureId: "capture-lens",
@@ -38,7 +42,8 @@ describe("createCandidateContextItem", () => {
       capturedAt: "2026-09-01T00:00:00.000Z",
     });
     expect(candidate.scope).toBe("selection");
-    expect(candidate.adapter?.id).toBe("context-lens");
+    // The Lens is a capture method; the semantic adapter identity survives.
+    expect(candidate.adapter?.id).toBe("generic-article");
   });
 });
 

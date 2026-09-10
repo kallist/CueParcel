@@ -14,9 +14,10 @@ import {
   isPositiveSafeInteger,
   isRecord,
 } from "../validation/primitives";
-import { isNormalizedDocument } from "../types/document";
+import { isNormalizedDocument, DOCUMENT_CAPTURE_METHODS } from "../types/document";
 import type {
   DocumentAdapterInfo,
+  DocumentCaptureMethod,
   DocumentCaptureScope,
   NormalizedDocument,
   SourceDescriptor,
@@ -53,6 +54,8 @@ export interface ContextSourceItem {
    * when available). Absent only for pre-V1.1 session data — never guessed.
    */
   adapter?: DocumentAdapterInfo;
+  /** How this content was captured (full page / Lens / text selection). */
+  method?: DocumentCaptureMethod;
   scope: DocumentCaptureScope;
   /** What the user selected on the page (absent for full-page captures). */
   selection?: ContextSelectionDetail;
@@ -72,6 +75,7 @@ const ITEM_KEYS = [
   "title",
   "sourceKind",
   "adapter",
+  "method",
   "scope",
   "selection",
   "role",
@@ -107,6 +111,13 @@ function isDocumentAdapterInfo(value: unknown): value is DocumentAdapterInfo {
   );
 }
 
+function isDocumentCaptureMethod(value: unknown): value is DocumentCaptureMethod {
+  return (
+    typeof value === "string" &&
+    (DOCUMENT_CAPTURE_METHODS as readonly string[]).includes(value)
+  );
+}
+
 export function isContextSourceItem(value: unknown): value is ContextSourceItem {
   if (
     !isRecord(value) ||
@@ -121,6 +132,7 @@ export function isContextSourceItem(value: unknown): value is ContextSourceItem 
     !isContextRole(value.role) ||
     typeof value.primary !== "boolean" ||
     (value.adapter !== undefined && !isDocumentAdapterInfo(value.adapter)) ||
+    (value.method !== undefined && !isDocumentCaptureMethod(value.method)) ||
     (value.selection !== undefined && !isContextSelectionDetail(value.selection))
   ) {
     return false;

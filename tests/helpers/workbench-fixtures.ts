@@ -20,6 +20,7 @@ export function makeWebDocument(overrides: Partial<NormalizedDocument> = {}): No
     assets: [],
     capture: {
       adapter: { id: "generic-article", name: "Generic Article" },
+      method: "full-page",
       scope: "full-page",
     },
     ...overrides,
@@ -52,6 +53,7 @@ export function makeGitHubIssueDocument(
     assets: [],
     capture: {
       adapter: { id: "github-issue", name: "GitHub Issue" },
+      method: "full-page",
       scope: "full-page",
     },
     ...overrides,
@@ -84,7 +86,11 @@ export function makeSelectionItem(
   overrides: Partial<ContextSourceItem> = {},
 ): ContextSourceItem {
   const document = makeWebDocument({
-    capture: { adapter: { id: "generic-article", name: "Generic Article" }, scope: "selection" },
+    capture: {
+      adapter: { id: "generic-article", name: "Generic Article" },
+      method: "context-lens",
+      scope: "selection",
+    },
   });
   const item: ContextSourceItem = {
     id: "item-selection",

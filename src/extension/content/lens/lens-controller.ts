@@ -43,6 +43,7 @@ import { createLensEngine } from "./lens-engine";
 import type { LensEngine } from "./lens-engine";
 import { materializeLensRegions } from "./lens-materialize";
 import { captureUserTextSelection, hasUserTextSelection } from "./user-text-selection";
+import { resolveSemanticAdapterId } from "./lens-materialize";
 
 export interface LensControllerDeps {
   locationHref(): string;
@@ -254,6 +255,8 @@ export function createLensController(deps: LensControllerDeps): LensController {
           url: session.url,
           capturedAt: session.capturedAt,
           pageTitle: deps.document.title,
+          // Semantic identity of the page, not the capture method (M-01).
+          adapterId: resolveSemanticAdapterId(session),
         },
       );
       return lensSelectionResult(session.captureId, result.document, result.excerpt);

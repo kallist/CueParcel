@@ -162,16 +162,20 @@ export function isSourceDescriptor(value: unknown): value is SourceDescriptor {
 // ---------------------------------------------------------------------------
 
 /**
- * Semantic adapter identities. A document records WHICH adapter produced its
- * blocks so receipts, nutrition labels and recipe suggestions can reason
- * about extraction provenance without re-running detection.
+ * Semantic adapter identities — "what IS this source?". A document records
+ * WHICH adapter produced its blocks so receipts, nutrition labels and recipe
+ * suggestions can reason about extraction provenance without re-running
+ * detection.
+ *
+ * A capture method is deliberately NOT in this list: "how the user cropped the
+ * page" (Context Lens, text selection) is an orthogonal dimension and must
+ * never overwrite the page's semantic identity (Final QA M-01).
  */
 export const DOCUMENT_ADAPTER_IDS = [
   "generic-article",
   "github-issue",
   "github-pull-request",
   "technical-docs",
-  "context-lens",
 ] as const;
 export type DocumentAdapterId = (typeof DOCUMENT_ADAPTER_IDS)[number];
 
@@ -180,7 +184,20 @@ export const DOCUMENT_ADAPTER_NAMES: Record<DocumentAdapterId, string> = {
   "github-issue": "GitHub Issue",
   "github-pull-request": "GitHub Pull Request",
   "technical-docs": "Technical Documentation",
+};
+
+/** How the captured content was obtained (Final QA M-01). */
+export const DOCUMENT_CAPTURE_METHODS = [
+  "full-page",
+  "context-lens",
+  "text-selection",
+] as const;
+export type DocumentCaptureMethod = (typeof DOCUMENT_CAPTURE_METHODS)[number];
+
+export const DOCUMENT_CAPTURE_METHOD_NAMES: Record<DocumentCaptureMethod, string> = {
+  "full-page": "Full page",
   "context-lens": "Context Lens",
+  "text-selection": "Text selection",
 };
 
 export interface DocumentAdapterInfo {
@@ -198,12 +215,15 @@ export const DOCUMENT_CAPTURE_SCOPES = [
 export type DocumentCaptureScope = (typeof DOCUMENT_CAPTURE_SCOPES)[number];
 
 export interface DocumentCaptureInfo {
+  /** Semantic adapter: what the page IS (never how it was cropped). */
   adapter: DocumentAdapterInfo;
+  /** Capture method: how the user obtained this content. */
+  method: DocumentCaptureMethod;
   scope: DocumentCaptureScope;
 }
 
 const ADAPTER_INFO_KEYS = ["id", "name"];
-const CAPTURE_INFO_KEYS = ["adapter", "scope"];
+const CAPTURE_INFO_KEYS = ["adapter", "method", "scope"];
 
 function isDocumentAdapterInfo(value: unknown): value is DocumentAdapterInfo {
   return (
@@ -219,6 +239,7 @@ function isDocumentCaptureInfo(value: unknown): value is DocumentCaptureInfo {
     isRecord(value) &&
     hasOnlyAllowedKeys(value, CAPTURE_INFO_KEYS) &&
     isDocumentAdapterInfo(value.adapter) &&
+    (DOCUMENT_CAPTURE_METHODS as readonly string[]).includes(value.method as string) &&
     (DOCUMENT_CAPTURE_SCOPES as readonly string[]).includes(value.scope as string)
   );
 }

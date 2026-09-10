@@ -37,6 +37,7 @@ describe("TechnicalDocsExtractor", () => {
     expect(isNormalizedDocument(document)).toBe(true);
     expect(document.capture).toEqual({
       adapter: { id: "technical-docs", name: "Technical Documentation" },
+      method: "full-page",
       scope: "full-page",
     });
     expect(document.metadata.title).toBe("Streaming API Reference");
@@ -58,6 +59,7 @@ describe("TechnicalDocsExtractor", () => {
     expect(isNormalizedDocument(document)).toBe(true);
     expect(document.capture).toEqual({
       adapter: { id: "generic-article", name: "Generic Article" },
+      method: "full-page",
       scope: "full-page",
     });
     expect(document.metadata.title).toBe("Tips for consuming our streaming API");

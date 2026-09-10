@@ -51,6 +51,7 @@ describe("GitHubPullRequestExtractor", () => {
     });
     expect(document.capture).toEqual({
       adapter: { id: "github-pull-request", name: "GitHub Pull Request" },
+      method: "full-page",
       scope: "full-page",
     });
   });

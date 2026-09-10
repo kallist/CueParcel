@@ -24,6 +24,7 @@ const SESSION = {
   url: "https://example.com/docs/page",
   capturedAt: "2026-09-01T00:00:00.000Z",
   pageTitle: "API docs",
+  adapterId: "generic-article" as const,
 };
 
 describe("user text selection support", () => {
@@ -47,7 +48,8 @@ describe("user text selection support", () => {
     expect(isNormalizedDocument(document)).toBe(true);
     expect(document.source.kind).toBe("web");
     expect(document.capture).toEqual({
-      adapter: { id: "context-lens", name: "Context Lens" },
+      adapter: { id: "generic-article", name: "Generic Article" },
+      method: "text-selection",
       scope: "text-selection",
     });
     const paragraphs = document.blocks.filter((block) => block.type === "paragraph");

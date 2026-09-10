@@ -41,7 +41,9 @@ describe("materializeLensRegions", () => {
     expect(isNormalizedDocument(fragment)).toBe(true);
     expect(fragment.source.kind).toBe("web");
     expect(fragment.capture).toEqual({
-      adapter: { id: "context-lens", name: "Context Lens" },
+      // M-01: the page's semantic adapter survives; the Lens is the method.
+      adapter: { id: "generic-article", name: "Generic Article" },
+      method: "context-lens",
       scope: "selection",
     });
     expect(fragment.blocks.length).toBeGreaterThan(1);

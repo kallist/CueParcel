@@ -135,6 +135,7 @@ export class GitHubPullRequestExtractor implements PageExtractor {
       assets: collectAssetsFromBlocks(blocks),
       capture: {
         adapter: { id: "github-pull-request", name: "GitHub Pull Request" },
+        method: "full-page",
         scope: "full-page",
       },
     };
@@ -251,19 +252,18 @@ function resolveAuthor(sourceDocument: Document): string | undefined {
   return undefined;
 }
 
+/**
+ * PR creation time. Same policy as the issue adapter: only a real
+ * <time>/<relative-time> `datetime` attribute is accepted, because the visible
+ * text is a rendered phrase and would make the result order-dependent.
+ */
 function resolvePublishedAt(sourceDocument: Document): string | undefined {
   for (const selector of PR_CREATED_TIME_SELECTORS) {
-    const element = sourceDocument.querySelector(selector);
-    if (element === null) {
-      continue;
-    }
-    const candidate = normalizeInlineText(
-      element.getAttribute("datetime") ?? element.textContent ?? "",
-    );
-    // Accept only a real timestamp: the rendered phrase ("on Aug 28, 2026")
-    // parses in V8 but is not a machine-consumable source fact.
-    if (isIsoDateTimeString(candidate)) {
-      return candidate;
+    for (const element of sourceDocument.querySelectorAll(selector)) {
+      const datetime = element.getAttribute("datetime");
+      if (datetime !== null && isIsoDateTimeString(datetime)) {
+        return datetime;
+      }
     }
   }
   return undefined;

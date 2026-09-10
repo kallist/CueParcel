@@ -45,7 +45,8 @@ describe("buildSelectionDocument", () => {
       url: "https://example.com/article",
       capturedAt: "2026-09-01T00:00:00.000Z",
       title: "Authentication",
-      adapterId: "context-lens" as const,
+      adapterId: "generic-article" as const,
+      method: "context-lens" as const,
       scope: "selection" as const,
       blocks: [...BLOCKS],
     };
@@ -54,12 +55,26 @@ describe("buildSelectionDocument", () => {
   it("builds a validated selection fragment document", () => {
     const document = buildSelectionDocument(base());
     expect(isNormalizedDocument(document)).toBe(true);
+    // Semantic adapter and capture method are separate dimensions (M-01).
     expect(document.capture).toEqual({
-      adapter: { id: "context-lens", name: "Context Lens" },
+      adapter: { id: "generic-article", name: "Generic Article" },
+      method: "context-lens",
       scope: "selection",
     });
     expect(document.source.kind).toBe("web");
     expect(document.assets).toEqual([]);
+  });
+
+  it("keeps the page's semantic adapter when the content was cropped (M-01)", () => {
+    const document = buildSelectionDocument({
+      ...base(),
+      url: "https://github.com/o/r/issues/12",
+      adapterId: "github-issue",
+    });
+    expect(document.source.kind).toBe("github_issue");
+    expect(document.capture?.adapter).toEqual({ id: "github-issue", name: "GitHub Issue" });
+    expect(document.capture?.method).toBe("context-lens");
+    expect(document.capture?.scope).toBe("selection");
   });
 
   it("rejects empty picks", () => {
@@ -82,9 +97,12 @@ describe("buildSelectionDocument", () => {
       ...base(),
       url: "https://github.com/o/r/pull/7",
       scope: "text-selection",
-      adapterId: "github-issue",
+      method: "text-selection",
+      adapterId: "github-pull-request",
     });
     expect(document.source.kind).toBe("github_pull_request");
     expect(document.capture?.scope).toBe("text-selection");
+    expect(document.capture?.method).toBe("text-selection");
+    expect(document.capture?.adapter.id).toBe("github-pull-request");
   });
 });

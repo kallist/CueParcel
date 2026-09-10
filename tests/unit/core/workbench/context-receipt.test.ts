@@ -127,7 +127,11 @@ describe("buildContextNutritionFacts", () => {
     const webDocument = makeWebDocument({
       source: { kind: "web", url: "https://docs.example.com/guide", site: "docs.example.com" },
       metadata: { title: "Guide", capturedAt: "2026-01-02T00:00:00.000Z" },
-      capture: { adapter: { id: "technical-docs", name: "Technical Documentation" }, scope: "full-page" },
+      capture: {
+        adapter: { id: "technical-docs", name: "Technical Documentation" },
+        method: "full-page",
+        scope: "full-page",
+      },
     });
     const item: ContextSourceItem = {
       id: "docs",

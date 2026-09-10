@@ -52,6 +52,7 @@ function candidateItemFromDocument(
     title: meta.title || document.metadata.title,
     sourceKind: document.source.kind,
     adapter: document.capture?.adapter,
+    method: document.capture?.method,
     scope: document.capture?.scope ?? "full-page",
     role: "reference",
     primary: false,

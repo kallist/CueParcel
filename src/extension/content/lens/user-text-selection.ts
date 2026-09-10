@@ -8,7 +8,7 @@
  * break) — no HTML, no DOM cloning, no scripts.
  */
 import { Page2AgentError, Page2AgentErrorCode } from "../../../core";
-import type { ContentBlock, NormalizedDocument } from "../../../core";
+import type { ContentBlock, DocumentAdapterId, NormalizedDocument } from "../../../core";
 import { buildSelectionDocument } from "../../../application/workbench";
 import { normalizeInlineText } from "../../../shared/dom/text";
 
@@ -39,12 +39,22 @@ export function currentSelectionText(deps: SelectionContextDeps): string {
 
 /**
  * Capture the current selection as a fragment document.
- * Selection text is chunked on double line breaks (browser block
- * boundaries); single line breaks inside a chunk become spaces.
+ * Selection text is chunked on double line breaks (browser block boundaries);
+ * single line breaks inside a chunk become spaces.
+ *
+ * `adapterId` is the page's SEMANTIC adapter, so a selection taken on a GitHub
+ * Issue stays a GitHub Issue source and only the capture METHOD is recorded as
+ * a text selection (Final QA M-01).
  */
 export function captureUserTextSelection(
   deps: SelectionContextDeps,
-  session: { captureId: string; url: string; capturedAt: string; pageTitle: string },
+  session: {
+    captureId: string;
+    url: string;
+    capturedAt: string;
+    pageTitle: string;
+    adapterId: DocumentAdapterId;
+  },
 ): UserSelectionResult {
   const text = currentSelectionText(deps);
   if (text.length === 0) {
@@ -64,7 +74,8 @@ export function captureUserTextSelection(
     url: session.url,
     capturedAt: session.capturedAt,
     title,
-    adapterId: "context-lens",
+    adapterId: session.adapterId,
+    method: "text-selection",
     scope: "text-selection",
     blocks,
   });

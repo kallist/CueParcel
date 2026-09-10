@@ -342,6 +342,7 @@ export function useWorkbench(
       title: document.metadata.title,
       sourceKind: document.source.kind,
       adapter: document.capture?.adapter,
+      method: document.capture?.method,
       scope: document.capture?.scope ?? "selection",
       selection:
         document.capture?.scope === "full-page"

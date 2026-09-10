@@ -150,7 +150,11 @@ export async function extractArticleDocument(
     metadata,
     blocks,
     assets: collectAssetsFromBlocks(blocks),
-    capture: { adapter: { id: adapter.id, name: adapter.name }, scope: "full-page" },
+    capture: {
+      adapter: { id: adapter.id, name: adapter.name },
+      method: "full-page",
+      scope: "full-page",
+    },
   };
   if (!isNormalizedDocument(document)) {
     throw new Page2AgentError(Page2AgentErrorCode.INVALID_DOCUMENT);
