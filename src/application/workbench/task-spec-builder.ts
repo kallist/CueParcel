@@ -31,6 +31,7 @@ import {
 import type {
   ContextCart,
   ContextSourceItem,
+  NormalizedDocument,
   RecipeId,
   TaskSpec,
   TaskSpecSource,
@@ -184,6 +185,10 @@ function buildSource(item: ContextSourceItem, isPrimary: boolean): TaskSpecSourc
   if (item.adapter !== undefined) {
     source.adapter = { id: item.adapter.id, name: item.adapter.name };
   }
+  const sourceFacts = resolveSourceFacts(document);
+  if (sourceFacts !== undefined) {
+    source.sourceFacts = sourceFacts;
+  }
   if (item.scope !== "full-page" && item.selection !== undefined) {
     source.selection = {
       regions: item.selection.regions,
@@ -191,6 +196,51 @@ function buildSource(item: ContextSourceItem, isPrimary: boolean): TaskSpecSourc
     };
   }
   return source;
+}
+
+/**
+ * Lift the adapter-verified semantic facts out of the captured document into
+ * the portable contract (Final QA M-02), so no downstream consumer has to
+ * re-parse the URL for the issue number, repository, labels or PR branches.
+ *
+ * Only facts the adapter actually resolved are copied. A field the DOM did not
+ * provide stays absent — nothing is inferred from the URL or guessed.
+ */
+function resolveSourceFacts(
+  document: NormalizedDocument,
+): TaskSpecSource["sourceFacts"] | undefined {
+  const { source } = document;
+  if (source.kind === "web") {
+    return undefined;
+  }
+  const facts: NonNullable<TaskSpecSource["sourceFacts"]> = {
+    repository: { owner: source.owner, name: source.repo },
+  };
+  if (source.kind === "github_issue") {
+    facts.issueNumber = source.issueNumber;
+  } else {
+    facts.pullRequestNumber = source.prNumber;
+    if (source.state !== undefined) {
+      facts.state = source.state;
+    }
+    if (source.baseBranch !== undefined) {
+      facts.baseBranch = source.baseBranch;
+    }
+    if (source.headBranch !== undefined) {
+      facts.headBranch = source.headBranch;
+    }
+  }
+  if (source.labels !== undefined && source.labels.length > 0) {
+    facts.labels = [...source.labels];
+  }
+  const { metadata } = document;
+  if (metadata.author !== undefined) {
+    facts.author = metadata.author;
+  }
+  if (metadata.publishedAt !== undefined) {
+    facts.publishedAt = metadata.publishedAt;
+  }
+  return facts;
 }
 
 function buildTaskTitle(

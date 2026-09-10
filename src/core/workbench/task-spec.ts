@@ -17,9 +17,11 @@
  */
 import {
   hasOnlyAllowedKeys,
+  isIsoDateTimeString,
   isMeaningfulText,
   isNonEmptyString,
   isNonNegativeSafeInteger,
+  isPositiveSafeInteger,
   isRecord,
 } from "../validation/primitives";
 import { isContextRole } from "./context-source";
@@ -43,6 +45,32 @@ export type TaskSpecSourceType = (typeof TASK_SPEC_SOURCE_TYPES)[number];
 export const TASK_SPEC_SCOPES = ["full_page", "selected_sections", "text_selection"] as const;
 export type TaskSpecSourceScope = (typeof TASK_SPEC_SCOPES)[number];
 
+/**
+ * Specialized, adapter-verified source facts (Final QA M-02).
+ *
+ * A downstream consumer must not have to re-parse the URL to learn the issue
+ * number, the repository, the labels or the PR branches: the adapter already
+ * read those from the rendered page. Only facts the adapter actually resolved
+ * are present — nothing is inferred, and every field is optional so an adapter
+ * can never be forced to claim a fact the DOM did not provide.
+ */
+export interface TaskSpecSourceFacts {
+  repository: { owner: string; name: string };
+  /** GitHub Issue number, when the source is an issue. */
+  issueNumber?: number;
+  /** GitHub Pull Request number, when the source is a pull request. */
+  pullRequestNumber?: number;
+  /** Rendered state: open / closed / merged (never guessed). */
+  state?: string;
+  labels?: string[];
+  /** Author display name as rendered on the page. */
+  author?: string;
+  /** Creation timestamp, ISO 8601, only when the page provided one. */
+  publishedAt?: string;
+  baseBranch?: string;
+  headBranch?: string;
+}
+
 export interface TaskSpecSource {
   id: string;
   type: TaskSpecSourceType;
@@ -53,6 +81,8 @@ export interface TaskSpecSource {
   /** JSON-scope naming: full_page / selected_sections / text_selection. */
   scope: TaskSpecSourceScope;
   adapter?: { id: string; name: string };
+  /** Adapter-verified semantic facts about the page (never re-derived). */
+  sourceFacts?: TaskSpecSourceFacts;
   /** What was picked on the page (regions/labels), for selected sources. */
   selection?: { regions: number; labels: string[] };
   capturedAt: string;
@@ -116,6 +146,7 @@ const SOURCE_KEYS = [
   "isPrimary",
   "scope",
   "adapter",
+  "sourceFacts",
   "selection",
   "capturedAt",
   "provenance",
@@ -124,6 +155,18 @@ const SOURCE_KEYS = [
   "tokenEstimate",
 ];
 const ADAPTER_KEYS = ["id", "name"];
+const SOURCE_FACTS_KEYS = [
+  "repository",
+  "issueNumber",
+  "pullRequestNumber",
+  "state",
+  "labels",
+  "author",
+  "publishedAt",
+  "baseBranch",
+  "headBranch",
+];
+const REPOSITORY_KEYS = ["owner", "name"];
 const SELECTION_KEYS = ["regions", "labels"];
 const PROVENANCE_KEYS = ["captureId"];
 const STATS_KEYS = ["characters", "codeBlocks", "tables", "links"];
@@ -163,6 +206,47 @@ function isSmallStringArray(value: unknown, max: number): boolean {
     value.length <= max &&
     value.every((entry) => isMeaningfulText(entry))
   );
+}
+
+export function isTaskSpecSourceFacts(value: unknown): value is TaskSpecSourceFacts {
+  if (
+    !isRecord(value) ||
+    !hasOnlyAllowedKeys(value, SOURCE_FACTS_KEYS) ||
+    !isRecord(value.repository) ||
+    !hasOnlyAllowedKeys(value.repository, REPOSITORY_KEYS) ||
+    !isMeaningfulText(value.repository.owner) ||
+    !isMeaningfulText(value.repository.name)
+  ) {
+    return false;
+  }
+  if (value.issueNumber !== undefined && !isPositiveSafeInteger(value.issueNumber)) {
+    return false;
+  }
+  if (
+    value.pullRequestNumber !== undefined &&
+    !isPositiveSafeInteger(value.pullRequestNumber)
+  ) {
+    return false;
+  }
+  for (const key of ["state", "author", "baseBranch", "headBranch"] as const) {
+    if (value[key] !== undefined && !isMeaningfulText(value[key])) {
+      return false;
+    }
+  }
+  if (value.labels !== undefined) {
+    if (!Array.isArray(value.labels) || value.labels.length === 0) {
+      return false;
+    }
+    if (!value.labels.every((label) => isMeaningfulText(label))) {
+      return false;
+    }
+  }
+  // publishedAt must be a real ISO 8601 timestamp, never a rendered phrase such
+  // as "on Aug 28, 2026": a downstream consumer must be able to parse it.
+  if (value.publishedAt !== undefined && !isIsoDateTimeString(value.publishedAt)) {
+    return false;
+  }
+  return true;
 }
 
 export function isTaskSpecSource(value: unknown): value is TaskSpecSource {
@@ -206,6 +290,9 @@ export function isTaskSpecSource(value: unknown): value is TaskSpecSource {
       !isMeaningfulText(value.adapter.id) ||
       !isMeaningfulText(value.adapter.name))
   ) {
+    return false;
+  }
+  if (value.sourceFacts !== undefined && !isTaskSpecSourceFacts(value.sourceFacts)) {
     return false;
   }
   if (value.selection !== undefined) {

@@ -19,6 +19,7 @@ import {
   Page2AgentError,
   Page2AgentErrorCode,
 } from "../../core";
+import { isIsoDateTimeString } from "../../core/validation/primitives";
 import type {
   DocumentMetadata,
   ExtractionInput,
@@ -191,7 +192,10 @@ function resolvePublishedAt(sourceDocument: Document): string | undefined {
     const candidate = normalizeInlineText(
       element.getAttribute("datetime") ?? element.textContent ?? "",
     );
-    if (candidate && !Number.isNaN(Date.parse(candidate))) {
+    // Accept only a real timestamp: the rendered phrase that GitHub sometimes
+    // exposes ("on Aug 28, 2026") parses in V8 but is not a machine-consumable
+    // source fact, and must never reach the domain.
+    if (isIsoDateTimeString(candidate)) {
       return candidate;
     }
   }

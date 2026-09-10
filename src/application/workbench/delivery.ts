@@ -93,10 +93,55 @@ function serializeSourceBlock(source: TaskSpecSource, index: number): string {
   if (source.selection !== undefined && source.selection.labels.length > 0) {
     meta.push(`Selection: ${source.selection.labels.join(" · ")}`);
   }
+  const facts = serializeSourceFacts(source);
+  if (facts.length > 0) {
+    meta.push("");
+    meta.push("Source facts:");
+    for (const fact of facts) {
+      meta.push(`- ${fact}`);
+    }
+  }
   meta.push(`~${source.tokenEstimate.tokens.toLocaleString("en-US")} estimated tokens`);
 
   const content = source.contentMarkdown.replace(/\s+$/, "");
   return `${heading}\n\n${meta.join("\n")}\n\n${content}`;
+}
+
+/**
+ * Human-readable adapter-verified facts. Deterministic order; only facts the
+ * adapter actually resolved are listed (Final QA M-02).
+ */
+function serializeSourceFacts(source: TaskSpecSource): string[] {
+  const facts = source.sourceFacts;
+  if (facts === undefined) {
+    return [];
+  }
+  const lines: string[] = [`Repository: ${facts.repository.owner}/${facts.repository.name}`];
+  if (facts.issueNumber !== undefined) {
+    lines.push(`Issue: #${facts.issueNumber}`);
+  }
+  if (facts.pullRequestNumber !== undefined) {
+    lines.push(`Pull request: #${facts.pullRequestNumber}`);
+  }
+  if (facts.state !== undefined) {
+    lines.push(`State: ${facts.state}`);
+  }
+  if (facts.baseBranch !== undefined) {
+    lines.push(`Base branch: ${facts.baseBranch}`);
+  }
+  if (facts.headBranch !== undefined) {
+    lines.push(`Head branch: ${facts.headBranch}`);
+  }
+  if (facts.author !== undefined) {
+    lines.push(`Author: ${facts.author}`);
+  }
+  if (facts.publishedAt !== undefined) {
+    lines.push(`Published: ${facts.publishedAt}`);
+  }
+  if (facts.labels !== undefined) {
+    lines.push(`Labels: ${facts.labels.join(", ")}`);
+  }
+  return lines;
 }
 
 function titleCase(value: string): string {

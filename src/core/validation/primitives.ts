@@ -28,8 +28,23 @@ export function isMeaningfulText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+/** ISO 8601 date-time with an explicit zone (Z or ±hh:mm). */
+const ISO_DATE_TIME_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+/**
+ * A real ISO 8601 timestamp, not merely something Date.parse() tolerates.
+ *
+ * Source facts must be machine-consumable: a rendered phrase such as
+ * "on Aug 28, 2026" parses in V8 but is not a timestamp, and must never reach
+ * the domain. Every value the adapters emit already carries an explicit zone.
+ */
 export function isIsoDateTimeString(value: unknown): value is string {
-  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+  return (
+    typeof value === "string" &&
+    ISO_DATE_TIME_PATTERN.test(value) &&
+    !Number.isNaN(Date.parse(value))
+  );
 }
 
 export function isNonNegativeSafeInteger(value: unknown): value is number {

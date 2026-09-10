@@ -34,14 +34,15 @@ import type {
   PageContext,
   PageExtractor,
 } from "../../core";
+import { isIsoDateTimeString } from "../../core/validation/primitives";
 import { normalizeInlineText } from "../../shared/dom/text";
 import { extractIssueBodyBlocks, isBodyTextEmpty } from "./github-issue-body";
 import { extractLabelsFromContainer } from "./github-labels";
 import {
   PR_AUTHOR_SELECTORS,
+  PR_BRANCH_REF_SELECTORS,
   PR_CREATED_TIME_SELECTORS,
   PR_DESCRIPTION_SELECTORS,
-  PR_HEADER_CONTAINER_SELECTORS,
   PR_LABELS_CONTAINER_SELECTORS,
   PR_STATE_SELECTORS,
   PR_TITLE_SELECTORS,
@@ -71,7 +72,7 @@ export class GitHubPullRequestExtractor implements PageExtractor {
 
     const titleElement = firstMatch(sourceDocument, PR_TITLE_SELECTORS);
     const titleText =
-      titleElement === null ? "" : normalizeInlineText(titleElement.textContent ?? "");
+      titleElement === null ? "" : normalizePrTitle(titleElement.textContent ?? "");
     const metadataTitle =
       titleText || `${identity.owner}/${identity.repo} pull request #${identity.prNumber}`;
 
@@ -193,19 +194,41 @@ function resolveState(sourceDocument: Document): GitHubPullRequestState | undefi
 }
 
 /**
+ * The current React PR header appends the PR number to the heading text
+ * ("feat: add workbench - #2"). That suffix is GitHub's own rendering, not part
+ * of the PR title, so it is removed. A title that legitimately ends in a
+ * different number is untouched.
+ */
+function normalizePrTitle(raw: string): string {
+  const text = normalizeInlineText(raw);
+  const match = /\s+-\s+#\d+$/.exec(text);
+  if (match === null) {
+    return text;
+  }
+  const stripped = text.slice(0, match.index).trim();
+  return stripped.length > 0 ? stripped : text;
+}
+
+/**
  * Base/head branch display names from the PR header, in the order GitHub
- * renders them ("… into {base} from {head}"). At most two refs are used.
+ * renders them ("… into {base} from {head}"). At most two refs are used, and
+ * duplicates (GitHub renders the pair twice in places) collapse so the real
+ * base/head pair is never lost to a repeated first entry.
  */
 function resolveBranchRefs(sourceDocument: Document): [string | undefined, string | undefined] {
-  const container = firstMatch(sourceDocument, PR_HEADER_CONTAINER_SELECTORS);
-  if (container === null) {
-    return [undefined, undefined];
-  }
   const refs: string[] = [];
-  for (const refElement of container.querySelectorAll("span.commit-ref")) {
-    const text = normalizeInlineText(refElement.textContent ?? "");
-    if (text.length > 0) {
+  const seen = new Set<string>();
+  for (const selector of PR_BRANCH_REF_SELECTORS) {
+    for (const refElement of sourceDocument.querySelectorAll(selector)) {
+      const text = normalizeInlineText(refElement.textContent ?? "");
+      if (text.length === 0 || seen.has(text)) {
+        continue;
+      }
+      seen.add(text);
       refs.push(text);
+      if (refs.length >= BRANCH_REF_LIMIT) {
+        return [refs[0], refs[1]];
+      }
     }
     if (refs.length >= BRANCH_REF_LIMIT) {
       break;
@@ -237,7 +260,9 @@ function resolvePublishedAt(sourceDocument: Document): string | undefined {
     const candidate = normalizeInlineText(
       element.getAttribute("datetime") ?? element.textContent ?? "",
     );
-    if (candidate && !Number.isNaN(Date.parse(candidate))) {
+    // Accept only a real timestamp: the rendered phrase ("on Aug 28, 2026")
+    // parses in V8 but is not a machine-consumable source fact.
+    if (isIsoDateTimeString(candidate)) {
       return candidate;
     }
   }
