@@ -71,7 +71,9 @@ function serializeTaskBlock(spec: TaskSpec): string {
     lines.push(`Target repository: ${spec.target.repository}`);
   }
   lines.push(
-    `Sources: ${spec.sources.length} · ~${spec.estimates.totalEstimatedTokens.toLocaleString("en-US")} estimated tokens`,
+    // Stage-named (UX-05) so this total is never confused with one source's
+    // packaged size or a Lens pick's selected size.
+    `Sources: ${spec.sources.length} · ~${spec.estimates.totalEstimatedTokens.toLocaleString("en-US")} total-context tokens (estimated)`,
   );
   if (spec.unknowns.length > 0) {
     lines.push("");
@@ -116,7 +118,9 @@ function serializeSourceBlock(source: TaskSpecSource, index: number): string {
       meta.push(`- ${fact}`);
     }
   }
-  meta.push(`~${source.tokenEstimate.tokens.toLocaleString("en-US")} estimated tokens`);
+  meta.push(
+    `~${source.tokenEstimate.tokens.toLocaleString("en-US")} packaged-source tokens (estimated)`,
+  );
 
   const content = source.contentMarkdown.replace(/\s+$/, "");
   return `${heading}\n\n${meta.join("\n")}\n\n${content}`;

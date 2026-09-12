@@ -201,6 +201,10 @@ export function createLensController(deps: LensControllerDeps): LensController {
           captureId: session.captureId,
           url: session.url,
           capturedAt: session.capturedAt,
+          // Needed so the docs adapter can CLASSIFY the page the fragment came
+          // from; without it that adapter's honest fallback would always win and
+          // a docs-shaped page would be recorded as a Generic Article.
+          document: deps.document,
         },
         regions: engine.selectedRegions(),
       });

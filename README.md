@@ -15,27 +15,61 @@ as agent text, faithful Markdown, or a versioned **TaskSpec** JSON contract.
 
 1. **Context Lens** — a beautiful in-page visual picking mode. Semantic
    regions (sections, code blocks, tables, lists, GitHub issue areas) are
-   highlighted on hover with live `estimated tokens`; one click includes or
-   excludes an area; the page DOM is never modified.
+   highlighted on hover with live `selected-content tokens`; one click includes
+   or excludes an area; the page DOM is never modified.
 2. **Context Cart** — combine multiple pages, picked sections and text
    selections into one agent context. Roles (`Task`, `Reference`,
    `Evidence`, `Example`, `Selection`), a single primary source, reorder,
    undo, clear — light, session-only, private.
 3. **Context Recipes** — no prompt writing: pick what the agent should do —
-   `🧠 Learn`, `⚖️ Compare`, `🔍 Verify`, `🛠 Build`, `🐛 Fix`. Recipes are
-   suggested from the adapter analysis but the user stays in control.
+   `Learn`, `Compare`, `Verify`, `Build`, `Fix`. Recipes are suggested from the
+   adapter analysis but the user stays in control.
 4. **Semantic Adapter 2.0** — Generic Article, GitHub Issue, GitHub Pull
    Request, and Technical Documentation detection (honest fallback to
    generic when confidence is insufficient).
 5. **TaskSpec** — a versioned, portable, deterministic JSON task contract
-   (sources, roles, provenance, explicit acceptance criteria only when the
-   source really provides them, unknowns, generated instructions, token
-   estimates) consumable by other tools (e.g. ContextForge) without
-   Page2Agent internals.
-6. **Context Receipt + Nutrition Label** — after capture (and after any
-   build) you see exactly what the agent will receive: Included/Excluded
-   facts, Generated vs Source separation, Unknowns, estimated tokens and
-   observable context facts. No fake quality scores.
+   (sources, roles, provenance, adapter-verified source facts, explicit
+   acceptance criteria only when the source really provides them, unknowns,
+   generated instructions, token estimates) consumable by other tools (e.g.
+   ContextForge) without Page2Agent internals.
+6. **Context Receipt + Nutrition Label** — a compact summary of exactly what the
+   agent will receive (total-context tokens and the source/generated/metadata
+   split), expanding into Included/Excluded facts, Generated vs Source
+   separation, Unknowns and observable context facts. No fake quality scores.
+
+### Three provenance dimensions, never conflated
+
+"What the source is", "how it was captured" and "how much was captured" are
+independent facts, so a GitHub Issue cropped with the Context Lens is still a
+GitHub Issue:
+
+```text
+Type:    GitHub Issue          ← semantic adapter (what the page IS)
+Adapter: GitHub Issue
+Capture: Context Lens          ← capture method (how the user cropped it)
+Scope:   Selected sections     ← capture scope (how much was captured)
+```
+
+TaskSpec carries the same split (`adapter`, `captureMethod`, `scope`).
+
+### Token stages
+
+One source is measured at three points, and the numbers legitimately differ, so
+every surface names the stage it shows. All values are **estimates** from one
+deterministic offline heuristic — no model tokenizer equivalence is implied.
+
+| Stage | Shown as | Where |
+|---|---|---|
+| Picked content | `~296 selected-content tokens` | Context Lens dock, pick summary |
+| Packaged source | `~560 packaged-source tokens` | Source card, Context Cart |
+| Whole context | `~836 total-context tokens` | Context Receipt, Nutrition Label |
+
+### Adapter-verified source facts
+
+Facts an adapter actually resolved travel into the TaskSpec so consumers never
+re-parse the URL: `repository`, `issueNumber` / `pullRequestNumber`, `state`,
+`labels`, `author`, `publishedAt`, `baseBranch`, `headBranch`. A fact the DOM did
+not provide stays **absent** — nothing is inferred or guessed.
 
 ## Install (development load)
 
@@ -51,6 +85,27 @@ npm run build
 Chrome: open `chrome://extensions` → enable **Developer mode** → **Load
 unpacked** → select the `dist/` folder. Edge: the same at `edge://extensions`.
 
+## Access: pin Page2Agent once
+
+The toolbar action is the product's entry point, so pin it for one-click access:
+
+1. Click the **Extensions** (puzzle-piece) icon in the browser toolbar.
+2. Click the **pin** next to **Page2Agent**.
+3. From then on: click the Page2Agent icon on any page → capture runs → the
+   Side Panel opens.
+
+**Page2Agent cannot pin itself.** Pinning is an explicit user decision in the
+browser's own UI, and an extension cannot perform it. When Page2Agent detects it
+is not pinned it shows a short, dismissible getting-started card saying exactly
+that, and falls quiet once dismissed.
+
+- **Keyboard shortcut:** `Alt+Shift+P` captures the current page without the
+  toolbar (reassignable at `chrome://extensions/shortcuts`).
+- **Toolbar badge:** shows the number of sources in this window's Context Cart,
+  so you can see at a glance whether context is assembled. Window-scoped: one
+  window's cart never paints another window's badge.
+- The Extensions menu remains the fallback entry point.
+
 ## Usage
 
 ### Fix an issue with supporting docs
@@ -62,7 +117,7 @@ unpacked** → select the `dist/` folder. Edge: the same at `edge://extensions`.
    then **Done** in the lens dock, and **Add to Context**.
 4. Open the official documentation, capture it, **+ Add to Context**.
 5. The Context Cart now holds 2 sources.
-6. Choose `🐛 Fix` (recommended for issue-backed contexts).
+6. Choose `Fix` (recommended for issue-backed contexts).
 7. Inspect the **Agent** / **Markdown** / **TaskSpec** tabs and the
    **Context Receipt** — exactly what will the agent receive?
 8. **Copy for Agent** (or Copy JSON / Download JSON) and paste it into any
@@ -72,8 +127,25 @@ unpacked** → select the `dist/` folder. Edge: the same at `edge://extensions`.
 
 1. Capture article A → **+ Add to Context**.
 2. Capture article B → **+ Add to Context** (Cart = 2).
-3. Choose `⚖️ Compare`. Single-source contexts can never produce a fake
+3. Choose `Compare`. Single-source contexts can never produce a fake
    comparison — Compare stays disabled until there are two sources.
+
+## Visual design & accessibility
+
+- **Premium graphite** visual language: layered dark surfaces (the hero theme),
+  a restrained blue → violet → cyan accent ramp, one soft aurora wash behind the
+  header and a bounded 12-particle atmosphere. No purple-drenched gradients, no
+  neon outlines, no heavy glassmorphism, no particle screensaver.
+- The light/system theme is preserved and deliberately calmer than dark.
+- **Reduced motion** (`prefers-reduced-motion: reduce`) removes all decorative
+  motion and hides the particles; nothing functional depends on animation —
+  every state is also carried by text, a badge, a border colour or a percentage.
+- Unified inline SVG line icons (no icon dependency, no remote assets).
+- Keyboard-navigable, `focus-visible` rings, semantic roles, `aria-expanded` on
+  the receipt disclosure, decorative layers are `aria-hidden` and never
+  focusable.
+- Text contrast is contrast-checked against every surface in both themes
+  (≥ 4.5:1 WCAG AA for secondary and muted text).
 
 ## Privacy & permissions
 
@@ -85,7 +157,8 @@ unpacked** → select the `dist/` folder. Edge: the same at `edge://extensions`.
   no browsing-data permissions.
 - Session state lives in `chrome.storage.session` only (cleared on browser
   close); at most one captured document per window is cached; captured page
-  content is never written to `chrome.storage.local`.
+  content is never written to `chrome.storage.local`. The only local preference
+  is a single boolean recording that the pin onboarding was dismissed.
 
 ## Architecture
 
@@ -105,7 +178,8 @@ Toolbar gesture → Capture → Semantic Adapter → NormalizedDocument
 - **Adapters** — Generic Article, GitHub Issue, GitHub Pull Request,
   Technical Documentation (registry: specific → generic, never the reverse).
 - **Extension** — Service Worker capture orchestration + lens router, content
-  script capture + lens engine, Side Panel workbench UI, session/cart storage.
+  script capture + lens engine, Side Panel workbench UI, session/cart storage,
+  toolbar badge and pin onboarding.
 
 Source content, source-derived facts and Page2Agent-generated instructions
 are strictly separated in every layer; the prompt-injection trust boundary
@@ -133,14 +207,17 @@ container.
 ## Testing
 
 - **Unit** — domain, validators, messaging (incl. all lens messages), cart
-  reducers, receipts, session/caches, filename/preview.
+  reducers, receipts, task specs, source facts, provenance dimensions, toolbar
+  badge, onboarding, session/caches, filename/preview.
 - **Integration** — adapters and TaskSpec pipelines against realistic offline
   fixtures (Generic, GitHub Issue incl. modern task lists, GitHub PR,
   Technical Docs, docs-lookalike pages that must stay Generic).
-- **Component** — Side Panel V1.1 states and flows (Testing Library).
-- **Browser E2E** — real Chromium with the built extension: capture,
-  Context Lens picking, Cart multi-source, recipe→TaskSpec mapping, docs
-  classification, receipts, restore/repeat/no-content paths.
+- **Component** — Side Panel V1.1 states and flows (Testing Library), including
+  receipt disclosure and toolbar/onboarding behaviour.
+- **Browser E2E** — real Chromium with the built extension: capture, Context
+  Lens picking, Cart multi-source, recipe→TaskSpec mapping, docs
+  classification, receipts (compact + expanded), token stages, provenance
+  dimensions, restore/repeat/no-content paths.
 
 ## Limitations
 
@@ -150,12 +227,17 @@ container.
   iframes and PDFs may not extract. GitHub DOM changes can break the GitHub
   adapters over time; the Technical Docs classifier is deliberately
   conservative (falls back to Generic).
+- Whitespace-significant content (config blocks, environment dumps) written
+  with `<br>` and alignment is preserved; content that relies on CSS-only
+  layout for structure is not recoverable from the DOM.
 - Token counts are **estimated** (one deterministic heuristic), never
   claimed equal to any model tokenizer.
 - The preview is plain text, not rendered Markdown.
 - Only session-scoped state is kept; there is no history, no accounts, no
-  sync. Context Lens visuals are not yet validated against a real headed
-  browser session in CI (manual QA item).
+  sync.
+- The native Side Panel container and the toolbar-click `activeTab` grant
+  cannot be automated, so they remain manual QA items (see the E2E harness note
+  above). Context Lens visuals are likewise a manual QA item.
 
 ## Ecosystem boundary
 

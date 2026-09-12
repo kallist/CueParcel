@@ -408,10 +408,12 @@ export function createLensEngine(deps: LensEngineDeps): LensEngine {
     }
     const state = snapshot();
     if (countLabel !== null) {
+      // Name the stage (UX-05): this figure measures the picked content only,
+      // before it is packaged as a Context source.
       countLabel.textContent =
         state.selectedCount === 0
           ? "No context selected yet"
-          : `${state.selectedCount} area${state.selectedCount === 1 ? "" : "s"} selected · ~${formatTokens(state.estimatedTokens)} estimated tokens`;
+          : `${state.selectedCount} area${state.selectedCount === 1 ? "" : "s"} selected · ~${formatTokens(state.estimatedTokens)} selected-content tokens`;
     }
     if (meter !== null) {
       meter.textContent = state.selectedCount === 0 ? "" : "●".repeat(Math.min(12, state.selectedCount));

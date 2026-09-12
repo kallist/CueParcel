@@ -95,9 +95,25 @@ test.beforeAll(async () => {
   extensionId = new URL(serviceWorker.url()).host;
 
   // Driver: the extension's own side panel page (extension context UI).
+  //
+  // The unpacked harness build is never pinned, so the pin onboarding renders
+  // on first paint. That is correct product behaviour, but it must not leak
+  // into workbench scenarios: the pin dialog would sit between the assertions
+  // and the workbench. Mark the preference as already dismissed, which is the
+  // same state a returning unpinned user is in, and happens before React mounts
+  // so the first render never shows the card.
   panel = await context.newPage();
+  await panel.addInitScript(() => {
+    try {
+      globalThis.localStorage.setItem("page2agent.onboarding.pinDismissed.v1", "true");
+    } catch {
+      /* localStorage unavailable: the card would simply render */
+    }
+  });
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-  await expect(panel.getByRole("heading", { name: "Page2Agent" })).toBeVisible();
+  // Exact match: the onboarding heading ("Welcome to Page2Agent") must never
+  // make this locator ambiguous.
+  await expect(panel.getByRole("heading", { name: "Page2Agent", exact: true })).toBeVisible();
 });
 
 test.afterAll(async () => {
@@ -226,6 +242,118 @@ test("E2E A — Context Lens picks one section; agent output only carries it", a
   await fixture.close();
 });
 
+test("E2E F — token stages are labelled distinctly across the workbench", async () => {
+  await clearSession();
+  const fixture = await openFixture("/generic/article-basic.html");
+  await triggerHarnessAction();
+  await waitForCapturedTitle("Capturing Web Contexts for Coding Agents");
+
+  // Packaged stage on the source card, before anything is added to the Cart.
+  await expect(panel.getByText(/packaged-source tokens/).first()).toBeVisible();
+  expect(await panel.getByText(/selected-content tokens/).count()).toBe(0);
+
+  // A Lens pick reports the SELECTED stage, never the packaged one.
+  await panel.getByRole("button", { name: "Pick Context" }).click();
+  await fixture.getByRole("heading", { name: "Why structure matters" }).click();
+  await expect(fixture.getByText(/1 area selected/)).toBeVisible();
+  await fixture.getByRole("button", { name: "Done" }).click();
+  await expect(panel.getByText(/selected-content tokens/).first()).toBeVisible();
+
+  // Adding it to the Cart moves the same source to the PACKAGED stage.
+  await panel.getByRole("button", { name: "Add to Context", exact: true }).click();
+  await expect(panel.getByText("Added 1 picked area(s) to Context.")).toBeVisible();
+  await expect(panel.locator(".cart-item-meta").first()).toContainText("packaged-source tokens");
+
+  // The receipt reports the TOTAL stage.
+  await expect(panel.locator(".receipt-total")).toContainText("total-context tokens");
+
+  // Every token number stays explicitly an estimate, and no surface shows a
+  // bare unlabelled estimate any more.
+  const labelled = await panel
+    .locator(".cart-item-meta, .cart-total, .receipt-total, .nutrition-tokens, .source-meta")
+    .allInnerTexts();
+  expect(labelled.length).toBeGreaterThan(0);
+  const tokenPhrases = labelled
+    .join(" ")
+    .match(/~[\d,]+ [a-z][a-z-]* ?tokens/gi) ?? [];
+  expect(tokenPhrases.length).toBeGreaterThan(0);
+  for (const phrase of tokenPhrases) {
+    expect(phrase.startsWith("~")).toBe(true);
+    expect(phrase).not.toMatch(/exact|tokenizer/i);
+  }
+  expect(tokenPhrases.some((phrase) => phrase.includes("packaged-source"))).toBe(true);
+  expect(tokenPhrases.some((phrase) => phrase.includes("total-context"))).toBe(true);
+
+  await fixture.close();
+});
+
+test("E2E G — Context Lens keeps the page adapter and records the capture method", async () => {
+  await clearSession();
+  const fixture = await openFixture("/generic/article-basic.html");
+  await triggerHarnessAction();
+  await waitForCapturedTitle("Capturing Web Contexts for Coding Agents");
+
+  // Full-page capture: Generic Article, full-page method, no duplicated label.
+  const sourceCard = panel.getByLabel("Captured source");
+  await expect(sourceCard.getByText("Generic Article")).toBeVisible();
+
+  await panel.getByRole("button", { name: "Pick Context" }).click();
+  await fixture.getByRole("heading", { name: "Why structure matters" }).click();
+  await fixture.getByRole("button", { name: "Done" }).click();
+  await panel.getByRole("button", { name: "Add to Context", exact: true }).click();
+  await expect(panel.getByText("Added 1 picked area(s) to Context.")).toBeVisible();
+
+  // M-01: the semantic adapter survives the crop; the method is separate.
+  const row = panel.locator(".cart-item-sub").first();
+  const line = await row.innerText();
+  expect(line).toContain("Generic Article");
+  expect(line).toContain("Context Lens");
+  expect(line).toContain("Selected sections");
+  // UX-06: no repeated label anywhere on the line.
+  const parts = line.split("·").map((part) => part.trim());
+  expect(new Set(parts).size).toBe(parts.length);
+
+  // TaskSpec carries both dimensions explicitly.
+  await panel.getByRole("tab", { name: "TaskSpec" }).click();
+  const spec = JSON.parse(await taskSpecText());
+  expect(spec.sources[0].adapter.id).toBe("generic-article");
+  expect(spec.sources[0].captureMethod).toBe("context_lens");
+  expect(spec.sources[0].scope).toBe("selected_sections");
+
+  await fixture.close();
+});
+
+test("E2E H — Context Receipt is truthful and compact by default", async () => {
+  await clearSession();
+  const fixture = await openFixture("/generic/article-basic.html");
+  await triggerHarnessAction();
+  await waitForCapturedTitle("Capturing Web Contexts for Coding Agents");
+
+  const receipt = panel.getByLabel("Context Receipt");
+  await receipt.scrollIntoViewIfNeeded();
+
+  // Compact summary present, details hidden.
+  await expect(receipt.locator(".receipt-total")).toBeVisible();
+  await expect(receipt.locator(".receipt-summary")).toBeVisible();
+  await expect(receipt.locator(".receipt-details")).toBeHidden();
+
+  await receipt.getByRole("button", { name: /View details/i }).click();
+  await expect(receipt.locator(".receipt-details")).toBeVisible();
+
+  // M-04: rows are neutral facts of THIS capture, never adapter capabilities.
+  const included = await receipt.locator(".receipt-source").first().innerText();
+  expect(included).toContain("Title");
+  expect(included).toContain("Content");
+  for (const capabilityName of ["Page Title", "Page Content", "Issue Title", "Issue Body"]) {
+    expect(included).not.toContain(capabilityName);
+  }
+  // A plain web article has no author, published time or labels, so the receipt
+  // must not claim them.
+  const authorRow = await receipt.locator("text=Author").count();
+  expect(authorRow).toBe(0);
+
+  await fixture.close();
+});
 test("E2E B — Context Cart combines two pages and Compare builds a 2-source task", async () => {
   await clearSession();
   const fixtureA = await openFixture("/generic/article-basic.html");
@@ -307,11 +435,28 @@ test("E2E E — Context Receipt shows observable Included/Excluded facts", async
 
   const receipt = panel.getByLabel("Context Receipt");
   await receipt.scrollIntoViewIfNeeded();
+
+  // Compact by default (UX-03): the summary answers "what will the agent get?"
+  // and the detail lists sit behind a real disclosure.
+  await expect(receipt.getByText(/total-context tokens/).first()).toBeVisible();
+  await expect(receipt.getByText("Clean")).toBeVisible();
+
+  const disclosure = receipt.getByRole("button", { name: /View details/i });
+  await expect(disclosure).toHaveAttribute("aria-expanded", "false");
+  const details = receipt.locator(".receipt-details");
+  await expect(details).toBeHidden();
+
+  await disclosure.click();
+  await expect(receipt.getByRole("button", { name: /Hide details/i })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(details).toBeVisible();
   await expect(receipt.getByText("Included")).toBeVisible();
   await expect(receipt.getByText("Excluded")).toBeVisible();
-  await expect(receipt.getByText("Generated", { exact: true })).toBeVisible();
+  // "Generated" is both a list heading and a nutrition row, so scope to the heading.
+  await expect(receipt.getByRole("heading", { name: "Generated", exact: true })).toBeVisible();
   await expect(receipt.getByText("Context facts")).toBeVisible();
-  await expect(receipt.getByText("Clean")).toBeVisible();
 
   await fixture.close();
 });

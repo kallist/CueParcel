@@ -120,3 +120,130 @@ pretty-printed, key-ordered and byte-deterministic for a given cart+recipe.
 - Panel logic is thin over a pure model, so future consumers (ContextForge,
   CLIs, harnesses) consume TaskSpec JSON without Page2Agent internals.
 - Lens DOM-immutability regression prevents overlay leaks into captures.
+
+## Addendum — Final QA fixes and premium UI (pre-merge)
+
+An independent real-browser Final QA pass (real Chrome 152 / Edge 152-153, real
+public pages, the production extension loaded unpacked) produced four MEDIUM,
+three LOW and three UX findings. This addendum records the resulting decisions;
+the original decisions above are unchanged where they were correct.
+
+### D12 — Three provenance dimensions, never conflated (fixes M-01)
+
+`DocumentCaptureInfo` is `{adapter, method, scope}`. `context-lens` was removed
+from `DOCUMENT_ADAPTER_IDS` — it is a **capture method**, not a semantic
+adapter — and a separate `DOCUMENT_CAPTURE_METHODS` vocabulary was introduced.
+A Lens pick resolves the page's semantic adapter through the **same production
+registry a full-page capture uses**, so cropping a GitHub Issue keeps
+`github-issue`, and TaskSpec gained `captureMethod` alongside `scope`.
+
+Why: "what the source is" and "how the user cropped it" are orthogonal. Sharing
+one slot lost the page identity downstream.
+
+The docs adapter classifies inside `extract()`, so the registry's eligibility
+answer alone is not an identity. Lens therefore hands that adapter the page
+document so *its* classifier decides, instead of defaulting to either label.
+
+### D13 — TaskSpec carries adapter-verified source facts (fixes M-02)
+
+`TaskSpecSource.sourceFacts` is an optional typed object: `repository`,
+`issueNumber` | `pullRequestNumber`, `state`, `labels`, `author`,
+`publishedAt`, `baseBranch`, `headBranch`. Only facts the adapter actually
+resolved are present; a fact the DOM did not provide stays absent.
+
+Why: the adapters already knew these, but the portable contract dropped them, so
+consumers had to re-parse URLs for the issue number, labels or PR branches.
+
+Strict validation applies: positive integers, non-empty label lists, and
+`publishedAt` must be a real ISO 8601 timestamp with an explicit zone.
+`isIsoDateTimeString` was tightened accordingly, because a rendered phrase
+("on Aug 28, 2026") parses in V8 but is not a machine-consumable source fact and
+made the value order-dependent.
+
+### D14 — Whitespace-significant content keeps its structure (fixes M-03)
+
+A structural, site-neutral detector (`src/shared/dom/preformatted.ts`) decides
+whether an element's visible text is whitespace-significant: enough `<br>`
+breaks, every segment short enough to be a data line, and at least two indented
+or assignment/arrow-keyed lines. Preformatted paragraph content serializes as a
+fenced code block; preformatted content inside a list item stays in the list as
+Markdown continuation lines so numbering is never reset.
+
+Why: the real GitHub Issue expressed an LLM config block with 10 `<br>` breaks
+and column alignment; flattening it into one prose line destroyed the
+information. No new block type and no schema change were needed, because
+`isMeaningfulText` already accepts multi-line strings.
+
+### D15 — Context Receipt states only captured facts (fixes M-04)
+
+Rows are neutral and adapter-independent (`Title`, `Content`, `Author`,
+`Published At`, `Labels`, `Selected Sections`, `Text Selection`) and each is
+emitted only when that fact exists in the document. The exported
+`RECEIPT_INCLUDED_CATEGORIES` capability checklist was removed.
+
+Why: naming rows from what an adapter *can* extract ("Issue Title",
+"PR Description") conflated capability with this capture's facts. `excluded`
+stays a separate field and remains mechanism facts, per the original decision.
+
+A related data defect was fixed in the GitHub label extractor: the literal
+placeholder "None yet" rendered inside an empty labels container was returned as
+a label, which let the receipt claim "Labels" for a source that has none.
+
+### D16 — Markdown escaping is position-aware (fixes L-01/L-02/L-03)
+
+Only characters that can change rendering are escaped, and only where they can.
+Parentheses are never escaped in ordinary text (they carry no meaning there;
+destinations have their own escaper). Emphasis characters are escaped only when
+not intraword, so `insert_content_list` and `llm_model_max_async=16` stay
+readable. Only `[` is escaped, because only it can open a link.
+
+Why: the previous rules escaped `)` but never `(`, escaped 38 underscores in one
+real issue body, and turned a human-facing title into `This \[Bug\]:…`.
+
+### D17 — Token estimates are labelled per stage (fixes UX-05)
+
+`selected-content tokens` (Lens / pick), `packaged-source tokens` (source card,
+Cart) and `total-context tokens` (Receipt, Nutrition) name the stage each figure
+belongs to, everywhere they appear, including agent output. All remain
+explicitly estimates.
+
+Why: the same source legitimately showed ~296, ~560 and ~836 with no
+explanation, so the numbers looked inconsistent rather than staged.
+
+### D18 — Receipt is compact by default; one dominant scroll surface (UX-03/UX-02)
+
+The Receipt leads with total-context tokens, the source/generated/metadata split
+and a one-line summary, and exposes Included/Excluded/Generated/Unknown/Warnings
+plus the full nutrition label behind a real disclosure (`aria-expanded` +
+`aria-controls`). The output preview is capped (300px, 190px on short panels)
+with `overscroll-behavior: contain`.
+
+Why: the expanded receipt pushed Copy/Download far down the panel, and a 9903px
+preview inside a 1511px document formed a nested scroll trap.
+
+### D19 — Toolbar access is honest about pinning
+
+A badge mirror of the window's Cart count, a dismissible pin onboarding driven
+by `chrome.action.getUserSettings()`, and an `Alt+Shift+P` `_execute_action`
+shortcut. No new permission was added.
+
+Why: the toolbar action is the only entry point, and an extension cannot pin
+itself. When the API is absent or the state is unknown, Page2Agent shows nothing
+rather than guessing; the copy states that Chrome requires the user to pin it.
+The badge is written by the window's own Side Panel with every Action call
+scoped to that window, so one window's cart can never paint another's badge.
+
+### D20 — Premium graphite visual system
+
+A full design-token layer (layered graphite surfaces, a restrained blue → violet
+→ cyan accent ramp, a real type scale and spacing scale), one soft aurora wash
+behind the header plus a bounded 12-particle CSS-only atmosphere, unified inline
+SVG line icons, and motion that only expresses state. `prefers-reduced-motion`
+removes all decorative motion and hides the particles; nothing functional
+depends on animation. The light/system theme is preserved and calmer than dark.
+
+Why: the workbench was functionally complete but visually generic. The
+constraint was deliberate restraint — no purple-drenched gradients, neon
+outlines, heavy glassmorphism or particle overload. Secondary and muted text
+contrast is measured against every surface in both themes
+(≥ 4.5:1 WCAG AA).

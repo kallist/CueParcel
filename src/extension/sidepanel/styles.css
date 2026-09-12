@@ -73,7 +73,9 @@
 
   --text: #171b22;
   --text-secondary: #545d6a;
-  --text-muted: #6d7787;
+  /* Contrast-checked against every light surface (UX-04): 6.0:1 on --bg and
+     5.2:1 on --bg-sunken, so muted text never falls under the 4.5:1 AA bar. */
+  --text-muted: #5f6875;
 
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
