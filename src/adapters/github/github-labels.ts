@@ -6,6 +6,13 @@
 import { normalizeInlineText } from "../../shared/dom/text";
 import { firstMatch } from "./github-issue-selectors";
 
+/**
+ * GitHub renders this literal placeholder inside the labels container when a
+ * source has no labels. It is chrome, not a label: treating it as one made the
+ * Context Receipt claim "Labels" for a source that has none (Final QA M-04).
+ */
+const NO_LABELS_PLACEHOLDER = "None yet";
+
 export function extractLabelsFromContainer(
   root: ParentNode,
   containerSelectors: readonly string[],
@@ -22,10 +29,11 @@ export function extractLabelsFromContainer(
     }
     const visibleText = element.querySelector('[data-component="Text"]')?.textContent;
     const text = normalizeInlineText(visibleText ?? element.textContent ?? "");
-    if (text && !seen.has(text)) {
-      seen.add(text);
-      labels.push(text);
+    if (text.length === 0 || text === NO_LABELS_PLACEHOLDER || seen.has(text)) {
+      continue;
     }
+    seen.add(text);
+    labels.push(text);
   }
   return labels;
 }

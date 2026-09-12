@@ -44,8 +44,9 @@ describe("buildContextReceipt", () => {
       task: { kind: "fix_issue" },
     });
     const row = receipt.sources[0];
+    // Neutral, adapter-independent rows; each one is a fact of THIS document.
     expect(row.included).toEqual(
-      expect.arrayContaining(["Issue Title", "Issue Body", "Author", "Reproduction", "Expected Behavior"]),
+      expect.arrayContaining(["Title", "Content", "Author", "Reproduction", "Expected Behavior"]),
     );
     expect(row.excluded).toEqual(
       expect.arrayContaining(["Comments and comment threads", "Navigation", "GitHub UI (sidebars, headers, profile chrome)"]),
@@ -63,7 +64,7 @@ describe("buildContextReceipt", () => {
     });
     const receipt = buildContextReceipt({ sources: [receiptSourceOf(item)] });
     expect(receipt.sources[0].included).toEqual(
-      expect.arrayContaining(["Page Title", "Page Content", "Selected Sections", "Authentication", "Error Handling"]),
+      expect.arrayContaining(["Title", "Content", "Selected Sections", "Authentication", "Error Handling"]),
     );
   });
 

@@ -2,32 +2,41 @@
  * Context Receipt + Context Nutrition Label derivation (V1.1).
  *
  * What exactly will the Agent receive? The receipt answers that with
- * OBSERVABLE structure — never with invented quality scores:
+ * OBSERVABLE structure — never with invented quality scores.
  *
- * - `included` labels come from the captured document itself (title, body,
- *   headings present in the blocks, labels when present);
- * - `excluded` labels are mechanism facts: each semantic adapter only
- *   extracts its known content region, so page chrome that never entered the
- *   document is listed as excluded by design;
+ * Truthfulness rules (Final QA M-04):
+ * - EVERY `included` row is derived from the captured document itself. A row is
+ *   emitted only when the corresponding fact really exists in that document, so
+ *   the receipt can never claim to contain something the capture does not have.
+ * - Rows use neutral, adapter-independent names ("Title", "Content", "Author",
+ *   "Published At", "Labels") because the receipt describes the CONTEXT, not
+ *   what an adapter is capable of extracting. There is deliberately no exported
+ *   "included categories" checklist: an adapter capability list must never be
+ *   mistaken for this capture's facts.
+ * - `excluded` rows are mechanism facts rather than document facts: each
+ *   semantic adapter extracts exactly one known content region, so the page
+ *   chrome it never reads is listed as excluded by design. They are a separate
+ *   field precisely so they cannot be confused with included content.
  * - `generated` / `unknowns` come from the Recipe + TaskSpec builder;
- * - nutrition percentages are computed from deterministic token estimates
- *   and always labeled estimated.
+ *   nutrition percentages are computed from deterministic token estimates and
+ *   always labeled estimated.
  */
 import type { ContentBlock, NormalizedDocument } from "../types/document";
 import { estimateDocumentTokens, TOKEN_ESTIMATE_METHOD } from "./token-estimate";
 import type { RecipeId } from "./recipes";
 import type { TaskSpec } from "./task-spec";
 
-export const RECEIPT_INCLUDED_CATEGORIES = [
-  "Page Title",
-  "Issue Title",
-  "Issue Body",
-  "PR Title",
-  "PR Description",
-  "Labels",
-  "Author",
-  "Published At",
-] as const;
+/** Neutral, adapter-independent names for facts present in a capture. */
+export const RECEIPT_INCLUDED_TITLE = "Title";
+export const RECEIPT_INCLUDED_CONTENT = "Content";
+export const RECEIPT_INCLUDED_AUTHOR = "Author";
+export const RECEIPT_INCLUDED_PUBLISHED_AT = "Published At";
+export const RECEIPT_INCLUDED_LABELS = "Labels";
+export const RECEIPT_INCLUDED_SELECTED_SECTIONS = "Selected Sections";
+export const RECEIPT_INCLUDED_TEXT_SELECTION = "Text Selection";
+
+/** GitHub renders this literal placeholder when a source has no labels. */
+const NO_LABELS_PLACEHOLDER = "None yet";
 
 export interface ReceiptSourceRow {
   id: string;
@@ -85,7 +94,6 @@ const ADAPTER_EXCLUDED: Readonly<Record<string, readonly string[]>> = {
   "github-issue": GITHUB_ISSUE_EXCLUDED,
   "github-pull-request": GITHUB_PR_EXCLUDED,
   "technical-docs": TECHNICAL_DOCS_EXCLUDED,
-  "context-lens": GENERIC_EXCLUDED,
 };
 
 export interface ReceiptSourceInput {
@@ -138,50 +146,45 @@ export function buildContextReceipt(input: BuildReceiptInput): ContextReceipt {
   };
 }
 
+/**
+ * Facts actually present in this captured document, in deterministic order.
+ * Nothing is added because an adapter "supports" it: a row appears only when
+ * the value it describes exists in the document.
+ */
 function deriveIncludedLabels(source: ReceiptSourceInput): string[] {
   const { document } = source;
   const labels: string[] = [];
-  const kind = document.source.kind;
-  const scopeLabel = (() => {
-    switch (source.scope) {
-      case "selection":
-        return "Selected Sections";
-      case "text-selection":
-        return "Text Selection";
-      default:
-        return undefined;
-    }
-  })();
 
-  if (kind === "github_issue") {
-    labels.push("Issue Title");
-    labels.push("Issue Body");
-  } else if (kind === "github_pull_request") {
-    labels.push("PR Title");
-    labels.push("PR Description");
-  } else {
-    labels.push("Page Title");
-    labels.push("Page Content");
+  if (isMeaningful(document.metadata.title)) {
+    labels.push(RECEIPT_INCLUDED_TITLE);
   }
-  if (scopeLabel !== undefined) {
-    labels.push(scopeLabel);
+  // A capture only exists when it produced content, and the adapters refuse to
+  // emit a document without blocks, so this is a fact of the capture itself.
+  if (document.blocks.length > 0) {
+    labels.push(RECEIPT_INCLUDED_CONTENT);
+  }
+
+  if (source.scope === "selection") {
+    labels.push(RECEIPT_INCLUDED_SELECTED_SECTIONS);
     for (const label of source.selectedLabels) {
-      if (!labels.includes(label)) {
+      if (isMeaningful(label)) {
         labels.push(label);
       }
     }
+  } else if (source.scope === "text-selection") {
+    labels.push(RECEIPT_INCLUDED_TEXT_SELECTION);
   }
-  if (document.metadata.author !== undefined) {
-    labels.push("Author");
+
+  if (isMeaningful(document.metadata.author)) {
+    labels.push(RECEIPT_INCLUDED_AUTHOR);
   }
-  if (document.metadata.publishedAt !== undefined) {
-    labels.push("Published At");
+  if (isMeaningful(document.metadata.publishedAt)) {
+    labels.push(RECEIPT_INCLUDED_PUBLISHED_AT);
   }
-  if (kind === "github_issue" || kind === "github_pull_request") {
-    if (document.source.labels !== undefined && document.source.labels.length > 0) {
-      labels.push("Labels");
-    }
+  if (document.source.kind !== "web" && hasRealLabels(document.source.labels)) {
+    labels.push(RECEIPT_INCLUDED_LABELS);
   }
+
   // Content subsections come straight from the normalized headings — the
   // strongest evidence of what is really inside the capture. A heading is a
   // labeled subsection when it comes after the first heading or is nested
@@ -203,7 +206,25 @@ function deriveIncludedLabels(source: ReceiptSourceInput): string[] {
       }
     }
   }
-  return dedupeLabels(labels);
+  return dedupeLabels(labels.filter((label) => label.length > 0));
+}
+
+function isMeaningful(value: string | undefined): boolean {
+  return value !== undefined && value.trim().length > 0;
+}
+
+/**
+ * Real labels only. GitHub renders the literal text "None yet" inside the
+ * labels container when a source has no labels; treating that as a label would
+ * make the receipt claim "Labels" for a source that has none (Final QA M-04).
+ */
+function hasRealLabels(labels: readonly string[] | undefined): boolean {
+  if (labels === undefined || labels.length === 0) {
+    return false;
+  }
+  return labels.some(
+    (label) => isMeaningful(label) && label.trim() !== NO_LABELS_PLACEHOLDER,
+  );
 }
 
 interface HeadingAnchor {

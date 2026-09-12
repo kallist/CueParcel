@@ -11,7 +11,7 @@
  * validated data (NormalizedDocument blocks / serialized text) — never raw
  * HTML. All strings shown come from pure serializers.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useCaptureSession } from "./capture-session";
 import { createProductionSessionDeps } from "./capture-session";
 import type { CaptureSessionDeps } from "./capture-session";
@@ -34,16 +34,23 @@ import { getRecipeDefinition, RECIPE_IDS } from "../../core";
 import type { ContextRole, ContextSourceItem, RecipeId, TaskSpec } from "../../core";
 import {
   ITEM_SCOPE_LABELS,
-  RECIPE_ICONS,
   RECIPE_TITLES,
-  ROLE_ICONS,
   ROLE_TITLES,
   SOURCE_KIND_LABELS,
   adapterLabel,
+  describeSourceLine,
   formatCapturedAt,
-  formatEstimate,
+  formatTokenStage,
   statusLabel,
 } from "./workbench-ui/format";
+import { Aurora, ParticleAtmosphere, RecipeIcon, RoleIcon } from "./workbench-ui/atmosphere";
+import {
+  createNullToolbarDeps,
+  createProductionToolbarDeps,
+} from "./workbench-ui/toolbar-deps";
+import type { ToolbarDeps } from "./workbench-ui/toolbar-deps";
+import { ONBOARDING_STEPS, PIN_HINT_TEXT, SHORTCUT_HINT } from "./onboarding";
+import type { OnboardingDecision } from "./onboarding";
 import type { CaptureResult } from "../capture/capture-result";
 
 const ROLES: readonly ContextRole[] = ["task", "reference", "evidence", "example", "selection"];
@@ -61,38 +68,126 @@ function feedbackClass(kind: WorkbenchFeedback["kind"]): FeedbackKindClass {
 export default function App({
   deps,
   workbench,
+  toolbar,
 }: {
   deps?: CaptureSessionDeps;
   workbench?: WorkbenchDeps;
+  toolbar?: ToolbarDeps;
 }) {
   const sessionDeps = useMemo(() => deps ?? createProductionSessionDeps(), [deps]);
   const workbenchDeps = useMemo(
     () => workbench ?? createProductionWorkbenchDeps(),
     [workbench],
   );
+  const toolbarDeps = useMemo(
+    () => toolbar ?? (deps === undefined && workbench === undefined
+      ? createProductionToolbarDeps()
+      : createNullToolbarDeps()),
+    [toolbar, deps, workbench],
+  );
   const { view } = useCaptureSession(sessionDeps);
 
   return (
     <main className="panel">
       <header className="panel-header">
+        <Aurora />
         <h1>Page2Agent</h1>
         <span className="panel-version">Visual Context Workbench</span>
       </header>
+
+      <PinOnboarding toolbar={toolbarDeps} />
 
       {view.status === "idle" && <IdleView />}
       {view.status === "capturing" && <CapturingView />}
       {view.status === "error" && <ErrorView message={view.error.message} />}
       {view.status === "captured" && (
-        <WorkbenchView result={view.result} workbenchDeps={workbenchDeps} />
+        <WorkbenchView
+          result={view.result}
+          workbenchDeps={workbenchDeps}
+          toolbar={toolbarDeps}
+        />
       )}
     </main>
+  );
+}
+
+/**
+ * First-run pin guidance. Shown only when the Action API positively reports the
+ * extension is NOT pinned and the user has not dismissed it (see onboarding.ts).
+ * The copy is deliberately honest: Chrome requires the user to pin it.
+ */
+function PinOnboarding({ toolbar }: { toolbar: ToolbarDeps }) {
+  const [decision, setDecision] = useState<OnboardingDecision>({
+    showOnboarding: false,
+    showPinHint: false,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    void toolbar.onboardingDecision().then((next) => {
+      if (!cancelled) {
+        setDecision(next);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [toolbar]);
+
+  if (!decision.showOnboarding && !decision.showPinHint) {
+    return null;
+  }
+
+  if (decision.showPinHint) {
+    return (
+      <p className="pin-hint" role="note">
+        <span aria-hidden="true">✦</span>
+        {PIN_HINT_TEXT}
+      </p>
+    );
+  }
+
+  async function dismiss(): Promise<void> {
+    await toolbar.dismissOnboarding();
+    setDecision({ showOnboarding: false, showPinHint: true });
+  }
+
+  return (
+    <section className="onboarding" aria-label="Getting started">
+      <ParticleAtmosphere />
+      <h2>Welcome to Page2Agent</h2>
+      <p className="onboarding-lead">
+        Turn the web into context your agents can actually use.
+      </p>
+      <ol className="onboarding-steps">
+        {ONBOARDING_STEPS.map((step) => (
+          <li key={step.title}>
+            <strong>{step.title}</strong>
+            <span>{step.detail}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="onboarding-actions">
+        <span className="muted">{SHORTCUT_HINT}</span>
+        <button type="button" className="button button-primary" onClick={() => void dismiss()}>
+          Got it
+        </button>
+      </div>
+    </section>
   );
 }
 
 function IdleView() {
   return (
     <section className="status-panel" aria-label="Extension status">
-      <div className="status-mark">▣</div>
+      <ParticleAtmosphere />
+      <div className="status-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+          <path d="M4 7.5l8-4 8 4-8 4z" />
+          <path d="M4 12.5l8 4 8-4" />
+          <path d="M4 17l8 4 8-4" />
+        </svg>
+      </div>
       <h2>No page captured yet</h2>
       <p>Click the Page2Agent toolbar icon on the page you want to understand.</p>
       <ol className="steps">
@@ -128,13 +223,37 @@ function ErrorView({ message }: { message: string }) {
 function WorkbenchView({
   result,
   workbenchDeps,
+  toolbar,
 }: {
   result: CaptureResult;
   workbenchDeps: WorkbenchDeps;
+  toolbar: ToolbarDeps;
 }) {
   const workbench = useWorkbench(workbenchDeps, result);
   const [activeTab, setActiveTab] = useState<"agent" | "markdown" | "taskspec">("agent");
   const [copied, setCopied] = useState<string | null>(null);
+
+  /**
+   * Keep this window's toolbar badge equal to this window's Cart count.
+   *
+   * Ownership: the panel resolves its OWN window id and the Badge API scopes
+   * the text to it, so window A's Cart can never paint window B's badge. The
+   * count is derived from the live Cart, so add / remove / undo / clear /
+   * restore all converge on the same value.
+   */
+  const cartCount = workbench.cart.items.length;
+  useEffect(() => {
+    let cancelled = false;
+    void toolbar.currentWindowId().then((windowId) => {
+      if (cancelled || windowId === null) {
+        return;
+      }
+      void toolbar.syncBadge(windowId);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [toolbar, cartCount]);
 
   return (
     <div className="workbench">
@@ -228,7 +347,9 @@ function SourceCard({
       </p>
       <p className="source-meta">
         {formatCapturedAt(result.capturedAt)}
-        {tokens !== null && <span className="dot-sep">{formatEstimate(tokens)}</span>}
+        {tokens !== null && (
+          <span className="dot-sep">{formatTokenStage(tokens, "packaged")}</span>
+        )}
       </p>
 
       {docMissing && (
@@ -276,7 +397,7 @@ function LensStrip({
         ) : (
           <span>
             {lens.selectedCount} area{lens.selectedCount === 1 ? "" : "s"} picked ·{" "}
-            {formatEstimate(lens.estimatedTokens)}
+            {formatTokenStage(lens.estimatedTokens, "selected")}
           </span>
         )}
       </div>
@@ -302,7 +423,7 @@ function SelectionAction({
   return (
     <div className="selection-action">
       <span className="selection-summary">
-        {label} · {formatEstimate(workbench.lens.estimatedTokens)}
+        {label} · {formatTokenStage(workbench.lens.estimatedTokens, "selected")}
       </span>
       <button
         type="button"
@@ -349,7 +470,7 @@ function RecipeChooser({ workbench }: { workbench: WorkbenchController }) {
               onClick={() => workbench.setRecipe(recipe)}
             >
               <span className="recipe-icon" aria-hidden="true">
-                {RECIPE_ICONS[recipe]}
+                <RecipeIcon recipe={recipe} />
               </span>
               <span className="recipe-name">{RECIPE_TITLES[recipe]}</span>
               {recommended === recipe && <span className="recipe-chip">Recommended</span>}
@@ -414,7 +535,8 @@ function CartSection({ workbench }: { workbench: WorkbenchController }) {
             ))}
           </ul>
           <p className="cart-total">
-            {totals.count} source{totals.count === 1 ? "" : "s"} · {formatEstimate(totals.tokenEstimate)}
+            {totals.count} source{totals.count === 1 ? "" : "s"} ·{" "}
+            {formatTokenStage(totals.tokenEstimate, "packaged")}
           </p>
         </>
       )}
@@ -433,7 +555,6 @@ function CartItemRow({
   count: number;
   workbench: WorkbenchController;
 }) {
-  const label = SOURCE_KIND_LABELS[item.sourceKind] ?? "Web Page";
   const tokens = candidateTokens(item);
   return (
     <li className="cart-item">
@@ -441,17 +562,26 @@ function CartItemRow({
         <span className="cart-grip" aria-hidden="true">⋮⋮</span>
         <div className="cart-item-text">
           <div className="cart-item-title-row">
+            {/* Unified line icon for the role, with the title as the accessible
+                name so the glyph never becomes the only signal. */}
+            <span className="cart-item-role" title={ROLE_TITLES[item.role]}>
+              <RoleIcon role={item.role} />
+              <span className="sr-only">{ROLE_TITLES[item.role]} role</span>
+            </span>
             <span className="cart-item-title" title={item.title}>
               {item.title}
             </span>
             {item.primary && <span className="badge badge-primary">Primary</span>}
           </div>
           <p className="cart-item-sub" title={item.url}>
-            {label}
-            {item.adapter !== undefined && ` · ${adapterLabel(item.adapter)}`}
-            {item.scope !== "full-page" && ` · ${ITEM_SCOPE_LABELS[item.scope] ?? item.scope}`}
+            {describeSourceLine({
+              sourceKind: item.sourceKind,
+              adapter: item.adapter,
+              method: item.method,
+              scope: item.scope,
+            })}
           </p>
-          <p className="cart-item-meta">{formatEstimate(tokens)}</p>
+          <p className="cart-item-meta">{formatTokenStage(tokens, "packaged")}</p>
         </div>
       </div>
       <div className="cart-item-controls">
@@ -501,9 +631,11 @@ function CartItemRow({
               }
             }}
           >
+            {/* Native <option> cannot hold SVG, so options stay plain text and
+                the unified icon set is used everywhere it can render. */}
             {ROLES.map((role) => (
               <option key={role} value={role}>
-                {ROLE_ICONS[role]} {ROLE_TITLES[role]}
+                {ROLE_TITLES[role]}
               </option>
             ))}
           </select>
@@ -646,10 +778,17 @@ function ReceiptSection({ workbench }: { workbench: WorkbenchController }) {
   const outputs = workbench.outputs!;
   const receipt = outputs.receipt!;
   const nutrition = outputs.nutrition!;
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsId = useId();
   const selectedLabel =
     workbench.selectedRecipe !== null
       ? RECIPE_TITLES[workbench.selectedRecipe]
       : undefined;
+  const facts = [
+    { label: "Source", percent: nutrition.sourceContentPercent },
+    { label: "Generated", percent: nutrition.generatedPercent },
+    { label: "Metadata", percent: nutrition.metadataPercent },
+  ];
 
   return (
     <section className="section receipt" aria-label="Context Receipt">
@@ -660,36 +799,82 @@ function ReceiptSection({ workbench }: { workbench: WorkbenchController }) {
         </span>
       </div>
 
-      {selectedLabel !== undefined && (
-        <p className="receipt-recipe">Recipe: {selectedLabel}</p>
-      )}
-      <p className="receipt-tokens">{formatEstimate(receipt.tokenEstimate.tokens)} of source content</p>
+      {/* Compact default: the answer to "what will my agent receive?" without
+          pushing Copy/Download out of reach (Final QA UX-03). */}
+      <p className="receipt-total">
+        <strong>{formatTokenStage(nutrition.estimatedTokens, "total")}</strong>
+        {selectedLabel !== undefined && (
+          <span className="dot-sep">Recipe: {selectedLabel}</span>
+        )}
+      </p>
 
-      <ul className="receipt-rows">
-        {receipt.sources.map((source) => (
-          <li key={source.id} className="receipt-source">
-            <div className="receipt-source-head">
-              <span className="receipt-source-title" title={source.title}>
-                {source.title}
-              </span>
-              {source.adapter !== undefined && (
-                <span className="muted">{source.adapter.name}</span>
-              )}
-            </div>
-            <CheckList label="Included" items={source.included} marker="✓" />
-            <CheckList label="Excluded" items={source.excluded} marker="×" muted />
-          </li>
+      <dl className="receipt-split">
+        {facts.map((fact) => (
+          <div key={fact.label}>
+            <dt>{fact.label}</dt>
+            <dd>{fact.percent}%</dd>
+          </div>
         ))}
-      </ul>
+      </dl>
 
-      {receipt.generated.length > 0 && (
-        <ListBlock title="Generated" items={receipt.generated.map((entry) => entry)} />
-      )}
-      {receipt.unknowns.length > 0 && (
-        <ListBlock title="Unknown" items={receipt.unknowns} />
-      )}
+      <p className="receipt-summary muted">
+        {nutrition.counts.sources} source{nutrition.counts.sources === 1 ? "" : "s"} ·{" "}
+        {nutrition.counts.headings} heading{nutrition.counts.headings === 1 ? "" : "s"} ·{" "}
+        {nutrition.counts.codeBlocks} code · {nutrition.counts.tables} table
+        {nutrition.counts.tables === 1 ? "" : "s"} · {nutrition.counts.links} link
+        {nutrition.counts.links === 1 ? "" : "s"}
+        {receipt.unknowns.length > 0 && (
+          <>
+            {" · "}
+            {receipt.unknowns.length} unknown
+            {receipt.unknowns.length === 1 ? "" : "s"}
+          </>
+        )}
+      </p>
 
-      <NutritionFacts nutrition={nutrition} />
+      <button
+        type="button"
+        className="button button-ghost receipt-disclosure"
+        aria-expanded={detailsOpen}
+        aria-controls={detailsId}
+        onClick={() => setDetailsOpen((open) => !open)}
+      >
+        <span className={`disclosure-caret${detailsOpen ? " disclosure-caret-open" : ""}`} aria-hidden="true">
+          ▸
+        </span>
+        {detailsOpen ? "Hide details" : "View details"}
+      </button>
+
+      <div id={detailsId} className="receipt-details" hidden={!detailsOpen}>
+        <ul className="receipt-rows">
+          {receipt.sources.map((source) => (
+            <li key={source.id} className="receipt-source">
+              <div className="receipt-source-head">
+                <span className="receipt-source-title" title={source.title}>
+                  {source.title}
+                </span>
+                {source.adapter !== undefined && (
+                  <span className="muted">{source.adapter.name}</span>
+                )}
+              </div>
+              <CheckList label="Included" items={source.included} marker="✓" />
+              <CheckList label="Excluded" items={source.excluded} marker="×" muted />
+            </li>
+          ))}
+        </ul>
+
+        {receipt.generated.length > 0 && (
+          <ListBlock title="Generated" items={receipt.generated.map((entry) => entry)} />
+        )}
+        {receipt.unknowns.length > 0 && (
+          <ListBlock title="Unknown" items={receipt.unknowns} />
+        )}
+        {receipt.warnings.length > 0 && (
+          <ListBlock title="Warnings" items={receipt.warnings} />
+        )}
+
+        <NutritionFacts nutrition={nutrition} />
+      </div>
     </section>
   );
 }
@@ -752,7 +937,7 @@ function NutritionFacts({ nutrition }: { nutrition: NonNullable<WorkbenchOutputs
   return (
     <div className="nutrition">
       <h4>Context facts</h4>
-      <p className="nutrition-tokens">{formatEstimate(nutrition.estimatedTokens)} total</p>
+      <p className="nutrition-tokens">{formatTokenStage(nutrition.estimatedTokens, "total")}</p>
       <div className="nutrition-bars">
         {rows.map((row) => (
           <div key={row.label} className="nutrition-row">

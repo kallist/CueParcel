@@ -12,6 +12,7 @@ import type { WorkbenchDeps } from "../../../../src/extension/sidepanel/use-work
 import type { CaptureResult } from "../../../../src/extension/capture/capture-result";
 import { windowDocumentKey } from "../../../../src/extension/session/document-cache";
 import { workbenchCartKey } from "../../../../src/extension/sidepanel/workbench/cart-session";
+import type { ToolbarDeps } from "../../../../src/extension/sidepanel/workbench-ui/toolbar-deps";
 
 const SESSION_DEPS: CaptureSessionDeps = {
   readIntent: async () => null,
@@ -99,10 +100,12 @@ function renderApp({
   storage,
   session = SESSION_DEPS,
   lens,
+  toolbar,
 }: {
   storage: SessionStorage;
   session?: CaptureSessionDeps;
   lens?: PanelLensClient;
+  toolbar?: ToolbarDeps;
 }) {
   const workbench: WorkbenchDeps = {
     storage,
@@ -110,7 +113,28 @@ function renderApp({
     lens: lens ?? makeLens(),
     subscribeMessages: () => () => undefined,
   };
-  return render(<App deps={session} workbench={workbench} />);
+  return render(<App deps={session} workbench={workbench} toolbar={toolbar} />);
+}
+
+/** Recording toolbar deps: badge syncs and onboarding decisions are observable. */
+function makeToolbar(overrides: Partial<ToolbarDeps> = {}) {
+  const syncs: number[] = [];
+  const record = { dismissed: 0, decisions: 0 };
+  const deps: ToolbarDeps = {
+    syncBadge: async (windowId) => {
+      syncs.push(windowId);
+    },
+    onboardingDecision: async () => {
+      record.decisions += 1;
+      return { showOnboarding: false, showPinHint: false };
+    },
+    dismissOnboarding: async () => {
+      record.dismissed += 1;
+    },
+    currentWindowId: async () => 5,
+    ...overrides,
+  };
+  return { deps, syncs, record };
 }
 
 describe("Page2Agent V1.1 side panel", () => {
@@ -193,10 +217,53 @@ describe("Page2Agent V1.1 side panel", () => {
     const heading = await screen.findByText("Context Receipt");
     const receipt = heading.closest("section");
     expect(receipt).not.toBeNull();
+    // Compact by default (Final QA UX-03): the summary is visible and the
+    // detail lists sit behind a disclosure.
+    expect(within(receipt!).getAllByText(/total-context tokens/).length).toBeGreaterThan(0);
+    const disclosure = within(receipt!).getByRole("button", { name: /View details/i });
+    expect(disclosure.getAttribute("aria-expanded")).toBe("false");
+    // The detail container is present but hidden while collapsed.
+    const details = receipt!.querySelector(".receipt-details") as HTMLElement;
+    expect(details.hidden).toBe(true);
+
+    await userEvent.click(disclosure);
+    expect(disclosure.getAttribute("aria-expanded")).toBe("true");
+    expect(details.hidden).toBe(false);
     expect(within(receipt!).getByText("Included")).toBeTruthy();
     expect(within(receipt!).getByText("Excluded")).toBeTruthy();
-    expect(within(receipt!).getAllByText(/estimated tokens/).length).toBeGreaterThan(0);
+    expect(within(receipt!).getAllByText(/tokens/).length).toBeGreaterThan(0);
     expect(within(receipt!).getByText("Context facts")).toBeTruthy();
+  });
+
+  it("keeps the receipt collapsed by default so delivery actions stay reachable", async () => {
+    const storage = makeStorage();
+    seedCapturedPage(storage);
+    renderApp({ storage, session: capturedSession() });
+
+    const heading = await screen.findByText("Context Receipt");
+    const receipt = heading.closest("section");
+    const disclosure = within(receipt!).getByRole("button", { name: /View details/i });
+    const details = receipt!.querySelector(".receipt-details");
+    expect(details).not.toBeNull();
+    expect((details as HTMLElement).hidden).toBe(true);
+
+    await userEvent.click(disclosure);
+    expect((details as HTMLElement).hidden).toBe(false);
+    await userEvent.click(within(receipt!).getByRole("button", { name: /Hide details/i }));
+    expect((details as HTMLElement).hidden).toBe(true);
+  });
+
+  it("labels the token stage instead of showing a bare estimate", async () => {
+    const storage = makeStorage();
+    seedCapturedPage(storage);
+    renderApp({ storage, session: capturedSession() });
+
+    const heading = await screen.findByText("Context Receipt");
+    const receipt = heading.closest("section");
+    // UX-05: "total-context tokens", never a bare "N estimated tokens".
+    expect(
+      within(receipt!).getAllByText(/~[\d,]+ total-context tokens/).length,
+    ).toBeGreaterThan(0);
   });
 
   it("keeps rendering cleanly when the chosen recipe becomes gated after clearing the cart", async () => {
@@ -287,5 +354,87 @@ describe("Page2Agent V1.1 side panel", () => {
     renderApp({ storage: makeStorage(), session });
     expect(await screen.findByText("Unable to find meaningful page content.")).toBeTruthy();
     expect(screen.getByText(/toolbar icon to try again/)).toBeTruthy();
+  });
+});
+
+describe("Page2Agent V1.1 toolbar access UX", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("shows the pin onboarding only when the extension is not pinned", async () => {
+    const storage = makeStorage();
+    const toolbar = makeToolbar({
+      onboardingDecision: async () => ({ showOnboarding: true, showPinHint: false }),
+    });
+    renderApp({ storage, toolbar: toolbar.deps });
+
+    expect(await screen.findByText("Welcome to Page2Agent")).toBeTruthy();
+    expect(screen.getByText("Pin Page2Agent")).toBeTruthy();
+    // The copy must not promise something Chrome does not allow.
+    expect(screen.getByText(/Extensions menu/)).toBeTruthy();
+    expect(screen.queryByText(/pins itself|automatically pins/i)).toBeNull();
+  });
+
+  it("does not show onboarding when already pinned or state is unknown", async () => {
+    const storage = makeStorage();
+    const toolbar = makeToolbar();
+    renderApp({ storage, toolbar: toolbar.deps });
+
+    await waitFor(() => expect(toolbar.record.decisions).toBeGreaterThan(0));
+    expect(screen.queryByText("Welcome to Page2Agent")).toBeNull();
+    expect(screen.queryByText(/Extensions menu/)).toBeNull();
+  });
+
+  it("dismisses onboarding and switches to the quiet hint", async () => {
+    const storage = makeStorage();
+    const toolbar = makeToolbar({
+      onboardingDecision: async () => ({ showOnboarding: true, showPinHint: false }),
+    });
+    renderApp({ storage, toolbar: toolbar.deps });
+
+    await screen.findByText("Welcome to Page2Agent");
+    await userEvent.click(screen.getByRole("button", { name: /Got it/i }));
+
+    expect(toolbar.record.dismissed).toBe(1);
+    await waitFor(() => expect(screen.queryByText("Welcome to Page2Agent")).toBeNull());
+    expect(screen.getByText(/Extensions menu/)).toBeTruthy();
+  });
+
+  it("offers the pin hint without the full card once dismissed", async () => {
+    const storage = makeStorage();
+    const toolbar = makeToolbar({
+      onboardingDecision: async () => ({ showOnboarding: false, showPinHint: true }),
+    });
+    renderApp({ storage, toolbar: toolbar.deps });
+
+    expect(await screen.findByText(/Extensions menu/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Got it/i })).toBeNull();
+  });
+
+  it("keeps this window's toolbar badge equal to this window's cart count", async () => {
+    const storage = makeStorage();
+    seedCapturedPage(storage);
+    const toolbar = makeToolbar();
+    renderApp({ storage, session: capturedSession(), toolbar: toolbar.deps });
+
+    await waitFor(() => expect(toolbar.syncs.length).toBeGreaterThan(0));
+    expect(toolbar.syncs.every((windowId) => windowId === 5)).toBe(true);
+
+    const before = toolbar.syncs.length;
+    await userEvent.click(await screen.findByRole("button", { name: /\+ Add to Context/i }));
+    await waitFor(() => expect(toolbar.syncs.length).toBeGreaterThan(before));
+    // Still scoped to this panel's own window, never another window's badge.
+    expect(toolbar.syncs.slice(before).every((windowId) => windowId === 5)).toBe(true);
+  });
+
+  it("never syncs a badge for an unresolvable window", async () => {
+    const storage = makeStorage();
+    seedCapturedPage(storage);
+    const toolbar = makeToolbar({ currentWindowId: async () => null });
+    renderApp({ storage, session: capturedSession(), toolbar: toolbar.deps });
+
+    await screen.findByText("Context Receipt");
+    expect(toolbar.syncs).toEqual([]);
   });
 });
