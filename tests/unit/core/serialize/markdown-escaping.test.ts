@@ -14,8 +14,18 @@ describe("escapeMarkdownText", () => {
     expect(escapeMarkdownText("`code`")).toBe("\\`code\\`");
   });
 
-  it("escapes only the bracket that can open a link", () => {
-    expect(escapeMarkdownText("[docs]")).toBe("\\[docs]");
+  it("escapes the bracket only when a link could really start there", () => {
+    // HQA-01 / HQA-05: the previous assertion here was
+    //   escapeMarkdownText("[docs]") === "\\[docs]"
+    // with the comment "escapes only the bracket that can open a link" — but a
+    // label with no destination CANNOT open a link, so the escape was pure
+    // noise that showed up in copied output as "[docs]". Only a bracket run
+    // followed by a destination or a reference is escaped.
+    expect(escapeMarkdownText("[docs]")).toBe("[docs]");
+    expect(escapeMarkdownText("[docs](https://example.com)")).toBe(
+      "\\[docs](https://example.com)",
+    );
+    expect(escapeMarkdownText("[docs][ref]")).toBe("\\[docs][ref]");
   });
 
   it("never breaks Windows paths", () => {
@@ -46,7 +56,7 @@ describe("escapeMarkdownText", () => {
 
   it("leaves mid-line markers untouched", () => {
     expect(escapeMarkdownText("a - b # c")).toBe("a - b # c");
-    expect(escapeMarkdownText("value [1] x")).toBe("value \\[1] x");
+    expect(escapeMarkdownText("value [1] x")).toBe("value [1] x");
   });
 });
 
@@ -80,9 +90,28 @@ describe("escapeMarkdownText — prose fidelity (Final QA L-01/L-02/L-03)", () =
   });
 
   it("does not escape human-facing titles into unreadable text", () => {
-    // Was: "This \\[Bug\\]:Image-heavy pages …"
-    expect(escapeMarkdownText("This [Bug]:Image-heavy pages take 100s+ to ingest")).toBe(
-      "This \\[Bug]:Image-heavy pages take 100s+ to ingest",
+    // HQA-01: the previous assertion here pinned the defect —
+    //   "This \\[Bug]:Image-heavy pages take 100s+ to ingest"
+    // — which is exactly the escaped title humans saw in the Agent output while
+    // the TaskSpec title stayed clean. A bracketed label with nothing after it
+    // is ordinary punctuation and must render verbatim.
+    const title = "This [Bug]:Image-heavy pages take 100s+ to ingest — ~24 LLM calls per image block";
+    expect(escapeMarkdownText(title)).toBe(title);
+    expect(escapeMarkdownText(title)).not.toContain("\\");
+  });
+
+  it("still neutralizes a title that could be parsed as a link", () => {
+    // Protection is kept where Markdown syntax genuinely matters: a label with
+    // a real destination or reference must not become a live link.
+    expect(escapeMarkdownText("[docs](https://example.com)")).toBe(
+      "\\[docs](https://example.com)",
+    );
+    expect(escapeMarkdownText("see [the guide][ref] for details")).toBe(
+      "see \\[the guide][ref] for details",
+    );
+    // A bracket run with nothing after it is NOT a link and stays readable.
+    expect(escapeMarkdownText("see [the guide] for details")).toBe(
+      "see [the guide] for details",
     );
   });
 

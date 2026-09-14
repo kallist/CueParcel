@@ -15,7 +15,11 @@
  *   previous asymmetry — escaping ")" but never "(" — produced broken-looking
  *   prose such as `least privilege\)`.
  * - Human-facing text (titles, headings) must not gain escapes that show up in
- *   copied output, so brackets only escape where a link could actually start.
+ *   copied output, so a bracket is escaped only when leaving it bare could
+ *   actually be parsed as a link or image label (HQA-01 / HQA-05). Square
+ *   brackets are ordinary punctuation otherwise: `This [Bug]:` and
+ *   `[Community] notes` stay readable, while `[label][ref]` and
+ *   `[label](/dest)` are neutralized.
  */
 
 /** Explicit escapes: always safe to escape, no readability cost. */
@@ -29,7 +33,13 @@ const ALWAYS_ESCAPED = /([\\`])/g;
  * escaped.
  */
 const EMPHASIS_NOT_INTRAWORD = /(^|[^0-9A-Za-z])([*_])|([*_])(?![0-9A-Za-z])/g;
-const LINK_OPENER = /\[/g;
+
+/**
+ * A bracket run that would be parsed as a link or image label: `[text]`
+ * immediately followed by a destination `(...)` or a reference `[ref]`.
+ * Only that `[` is escaped; `[Bug]` with nothing after it cannot start a link.
+ */
+const LINK_LABEL_OPENER = /\[(?=[^\]]*\](?:\(|\[))/g;
 
 /** Escape inline special characters in ordinary semantic text. */
 export function escapeMarkdownText(text: string): string {
@@ -47,7 +57,7 @@ function escapeMarkdownLine(line: string): string {
         ? `${boundary}\\${atStart}`
         : `${boundary === undefined ? "" : boundary}\\${atEnd}`,
     )
-    .replace(LINK_OPENER, "\\[");
+    .replace(LINK_LABEL_OPENER, "\\[");
   let prefixed = result.replace(/^(\s*)(#{1,6})(\s)/, "$1\\$2$3");
   prefixed = prefixed.replace(/^(\s*)(>)(\s)/, "$1\\$2$3");
   prefixed = prefixed.replace(/^(\s*)([-+])(\s)/, "$1\\$2$3");

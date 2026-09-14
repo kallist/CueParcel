@@ -53,21 +53,31 @@ describe("serializeContentBlocks", () => {
     ).toBe("- [x] done\n- [ ] pending\n");
   });
 
-  it("escapes the link-opening bracket inside list items", () => {
-    // Only "[" can open a link reference, so only it is escaped; a bare "]"
-    // has no Markdown meaning and escaping it produced noisy output
-    // (Final QA L-01).
+  it("leaves a bracketed index inside list items readable", () => {
+    // HQA-05: this previously expected "- array\\[x] value". A bracket run with
+    // no destination or reference after it cannot open a link, so the escape was
+    // noise in copied output. Real link syntax is still neutralized below.
     expect(
       serializeContentBlocks([{ type: "list", ordered: false, items: ["array[x] value"] }]),
-    ).toBe("- array\\[x] value\n");
+    ).toBe("- array[x] value\n");
+  });
+
+  it("still neutralizes a list item that could be parsed as a link", () => {
+    expect(
+      serializeContentBlocks([
+        { type: "list", ordered: false, items: ["[docs](https://example.com)"] },
+      ]),
+    ).toBe("- \\[docs](https://example.com)\n");
   });
 
   it("serializes links with escaped text and preserved URLs", () => {
+    // The destination is what must stay structural, and it does: the URL's own
+    // parentheses are escaped. The label's brackets are ordinary text.
     expect(
       serializeContentBlocks([
         { type: "link", href: "https://example.com/a(b)?q=1", text: "docs [x]" },
       ]),
-    ).toBe("[docs \\[x]](https://example.com/a\\(b\\)?q=1)\n");
+    ).toBe("[docs [x]](https://example.com/a\\(b\\)?q=1)\n");
   });
 
   it("serializes images with alt, title and escaping", () => {
@@ -217,5 +227,25 @@ describe("serializeNormalizedDocument", () => {
     const output = serializeNormalizedDocument(makeDocument([{ type: "paragraph", text: "x" }]));
     expect(output).not.toContain("Page2Agent Agent Instructions");
     expect(output).not.toContain("Audit the target repository");
+  });
+
+  /**
+   * HQA-01 regression.
+   *
+   * The live title of github.com/HKUDS/RAG-Anything/issues/348 begins
+   * "This [Bug]:". The TaskSpec title stayed clean while every human-readable
+   * surface showed "This \[Bug]:" because the heading/title paths run through
+   * escapeMarkdownText and every "[" was escaped. The title must render exactly
+   * as the page states it.
+   */
+  it("renders a bracketed source title verbatim (HQA-01)", () => {
+    const title = "This [Bug]:Image-heavy pages take 100s+ to ingest — ~24 LLM calls per image block";
+    const document = makeDocument([{ type: "heading", level: 2, text: title }]);
+    document.metadata.title = title;
+
+    const output = serializeNormalizedDocument(document);
+    expect(output).toContain(`# ${title}`);
+    expect(output).toContain(`## ${title}`);
+    expect(output).not.toContain("\\[");
   });
 });
