@@ -227,12 +227,30 @@ export function createLensController(deps: LensControllerDeps): LensController {
     }
   }
 
+  /**
+   * Panel-initiated cancel (HQA-03).
+   *
+   * The panel's Lens-Strip Cancel must converge with the page dock's Cancel:
+   * "discard what I picked" and "stop picking" are the same user intent, and
+   * leaving the engine active would leave a live dock, highlight layer and
+   * capture-phase click listener on the page — an active picking session the
+   * user never asked to keep. So this always ends the session: an active engine
+   * is deactivated (which removes the host and every listener), and retained
+   * picks from a finished session are dropped.
+   */
   function handleClear(captureId: string): LensClearResponse {
     if (state.session === null || state.session.captureId !== captureId) {
       return { type: LENS_CLEAR_RESPONSE, captureId, ok: false, error: errorView(Page2AgentErrorCode.NO_CONTENT_FOUND) };
     }
-    if (state.engine !== null) {
-      state.engine.clearSelections();
+    const engine = state.engine;
+    if (engine !== null) {
+      // deactivate() already discards picks; clearSelections() is for the
+      // Done-then-discard path where the session ended but picks are retained.
+      if (engine.isActive()) {
+        engine.deactivate();
+      } else {
+        engine.clearSelections();
+      }
     }
     return lensClearResult(captureId);
   }

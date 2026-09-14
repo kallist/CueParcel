@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { JSDOM } from "jsdom";
 import { createLensController } from "../../../../../src/extension/content/lens/lens-controller";
+import { LENS_HOST_ID } from "../../../../../src/extension/content/lens/lens-engine";
 import {
   LENS_ENTER_RESPONSE,
   LENS_MATERIALIZE_RESPONSE,
@@ -144,6 +145,85 @@ describe("lens controller — content script side", () => {
     expect(clear.ok).toBe(true);
     const response = await handleMaterialize(controller);
     expect(response.materialization).toBeUndefined();
+  });
+
+  /**
+   * HQA-03 regression.
+   *
+   * The panel's Lens-Strip Cancel used to call lens.clear, which only dropped
+   * the picked regions. The engine stayed ACTIVE, so the overlay host, the dock
+   * and the capture-phase click listener remained on the page: cancelling from
+   * the panel left the user in a picking session they had just cancelled, and
+   * the panel and the page disagreed about whether the lens was on. These tests
+   * fail without the controller ending the session.
+   */
+  describe("HQA-03 — panel cancel ends the session like the dock cancel", () => {
+    function lensHost(document: Document): Element | null {
+      return document.getElementById(LENS_HOST_ID);
+    }
+
+    async function clearPicks(
+      controller: ReturnType<typeof createLensController>,
+      captureId = SESSION.captureId,
+    ) {
+      return (await controller.handle({
+        type: "lens.clear.request",
+        tabId: 7,
+        captureId,
+      })) as { ok: boolean };
+    }
+
+    it("removes the overlay host and stops picking when cancelled mid-session", async () => {
+      const { controller, document, window } = makeDeps();
+      await handleEnter(controller);
+      expect(lensHost(document)).not.toBeNull();
+
+      clickOn(window, document.getElementById("p1")!);
+      expect(await clearPicks(controller)).toEqual({ ok: true, type: "lens.clear.response", captureId: SESSION.captureId });
+
+      // The live intercepting overlay must be gone, not merely emptied.
+      expect(lensHost(document)).toBeNull();
+    });
+
+    it("stops intercepting page clicks after a panel cancel", async () => {
+      const { controller, document, window } = makeDeps();
+      await handleEnter(controller);
+      clickOn(window, document.getElementById("p1")!);
+      await clearPicks(controller);
+
+      // A click on content must now reach the page untouched: while the lens is
+      // active the engine calls preventDefault() to turn clicks into picks.
+      const target = document.getElementById("p2")!;
+      const event = new window.MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+      target.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+
+      // And nothing new is selected.
+      const response = await handleMaterialize(controller);
+      expect(response.materialization).toBeUndefined();
+    });
+
+    it("still drops retained picks when the session already finished with Done", async () => {
+      const { controller, document, window } = makeDeps();
+      await handleEnter(controller);
+      clickOn(window, document.getElementById("p1")!);
+
+      // Done: the engine deactivates but RETAINS picks for materialization.
+      document
+        .getElementById(LENS_HOST_ID)!
+        .shadowRoot!.querySelectorAll(".p2a-button")
+        .forEach((button) => {
+          if (button.textContent === "Done") {
+            (button as HTMLElement).click();
+          }
+        });
+      expect(lensHost(document)).toBeNull();
+
+      // The panel discards them after a successful hand-off.
+      await clearPicks(controller);
+      const response = await handleMaterialize(controller);
+      expect(response.materialization).toBeUndefined();
+    });
   });
 
   it("probes the page for an existing user text selection", async () => {
