@@ -109,5 +109,13 @@ export const ONBOARDING_STEPS = [
 export const PIN_HINT_TEXT =
   "Pin Page2Agent from Chrome's Extensions menu for one-click access.";
 
-/** Keyboard shortcut hint; the manifest registers the real binding. */
-export const SHORTCUT_HINT = "Keyboard: Alt+Shift+P";
+/**
+ * Keyboard shortcut hint; the manifest registers the real binding.
+ *
+ * Alt+Shift+Y, not Alt+Shift+P: Chrome reserves Alt+Shift+P for its own
+ * "Pin tab" command, so a suggested_key of Alt+Shift+P is silently left
+ * unassigned and the shortcut never works (HQA Test 22). Alt+Shift+Y assigns
+ * cleanly. Keep this constant in sync with public/manifest.json — a test pins
+ * the two together.
+ */
+export const SHORTCUT_HINT = "Keyboard: Alt+Shift+Y";
