@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="220" height="48" role="img" aria-label="CueParcel">
+  <g transform="translate(4 8) scale(1)">
+    <path d="M 27.657 6.56 A 15 15 0 1 1 27.657 25.44 L 23.305 21.916 A 9.4 9.4 0 1 0 23.305 10.084 Z" fill="#111318"/>
+    <circle cx="21" cy="16" r="2.85" fill="#3157FF"/>
+  </g>
+  <text x="52" y="32" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" letter-spacing="-0.4" fill="#111318">CueParcel</text>
+</svg>
