@@ -92,15 +92,28 @@ Expected: image count should add roughly one vision call each, not multiply tota
     expect(isPreformattedTextLines(["a=1", "b=2", "gamma", "delta"])).toBe(true);
   });
 
-  it("accepts indentation-based alignment as structure", () => {
+  it("accepts assignment-keyed lines as structure", () => {
+    // Indentation is not a signal: line text is trimmed before classification,
+    // because HTML collapses leading whitespace anyway.
     expect(
       isPreformattedTextLines([
         "first line",
-        "  aligned_one",
-        "  aligned_two",
+        "aligned_one=1",
+        "aligned_two=2",
         "last line",
       ]),
     ).toBe(true);
+  });
+
+  it("rejects unindented prose lines with no keyed shape", () => {
+    expect(
+      isPreformattedTextLines([
+        "first line of prose",
+        "second line of prose",
+        "third line of prose",
+        "fourth line of prose",
+      ]),
+    ).toBe(false);
   });
 
   it("counts breaks in the subtree but ignores skipped subtrees", () => {
@@ -208,5 +221,144 @@ describe("M-03 — preformatted paragraph becomes a code block", () => {
         text: "One ordinary sentence. Another ordinary sentence. And a third one here.",
       },
     ]);
+  });
+});
+
+/**
+ * HQA-02 — colon-keyed environment/config blocks.
+ *
+ * The literal markup of the "LightRAG Config Used" region of
+ * github.com/HKUDS/RAG-Anything/issues/348: NINE `key: value` lines joined by
+ * <br> in a single <p>, with no indentation and no `=`/`->` anywhere. The
+ * detector had no signal for that shape, so the region was flattened into one
+ * run-on prose line and the source's structure was destroyed.
+ */
+const COLON_KEYED_CONFIG_MARKUP = `<div>
+<h3>LightRAG Config Used</h3>
+<h1>Paste your config here</h1>
+<p>lightrag-hku: 1.4.16<br>
+python: 3.12<br>
+OS: Debian (Docker, linux/amd64)<br>
+LLM: gpt-4o-mini (extraction and vision)<br>
+embeddings: text-embedding-3-small<br>
+parser: mineru, parse_method=auto<br>
+vision detail: low<br>
+storage: Neo4j (graph)<br>
+network: client hosted in Pakistan — see note below</p>
+</div>`;
+
+const COLON_KEYED_CONFIG_LINES = [
+  "lightrag-hku: 1.4.16",
+  "python: 3.12",
+  "OS: Debian (Docker, linux/amd64)",
+  "LLM: gpt-4o-mini (extraction and vision)",
+  "embeddings: text-embedding-3-small",
+  "parser: mineru, parse_method=auto",
+  "vision detail: low",
+  "storage: Neo4j (graph)",
+  "network: client hosted in Pakistan — see note below",
+];
+
+describe("HQA-02 — colon-keyed config blocks keep their line structure", () => {
+  it("detects a colon-keyed environment block as whitespace-significant", () => {
+    const element = elementFrom(
+      `<p>${COLON_KEYED_CONFIG_LINES.join("<br>")}</p>`,
+    );
+    expect(isPreformattedElement(element)).toBe(true);
+    expect(isPreformattedTextLines(COLON_KEYED_CONFIG_LINES)).toBe(true);
+  });
+
+  it("keeps every config line on its own line in the emitted Markdown", () => {
+    const blocks = blocksFrom(COLON_KEYED_CONFIG_MARKUP);
+    const config = blocks.find((block) => block.type === "code");
+    expect(config).toBeDefined();
+    expect(config && config.type === "code" ? config.code.split("\n") : []).toEqual(
+      COLON_KEYED_CONFIG_LINES,
+    );
+
+    const markdown = serializeContentBlocks(blocks);
+    for (const line of COLON_KEYED_CONFIG_LINES) {
+      expect(markdown.split("\n")).toContain(line);
+    }
+    // No run-on line may survive anywhere in the output.
+    expect(markdown).not.toContain("1.4.16 python: 3.12");
+  });
+
+  it("preserves the heading around the block instead of absorbing it", () => {
+    const blocks = blocksFrom(COLON_KEYED_CONFIG_MARKUP);
+    expect(blocks[0]).toEqual({ type: "heading", level: 3, text: "LightRAG Config Used" });
+  });
+
+  // --- Boundary controls: prose must never be turned into code -------------
+  it("still collapses a cosmetic <br> in ordinary prose", () => {
+    expect(blocksFrom("<p>Hello<br>world</p>")).toEqual([
+      { type: "paragraph", text: "Hello world" },
+    ]);
+  });
+
+  it("still collapses an Observed:/Expected: prose pair", () => {
+    const html = `<p>Observed: ~330 calls / ~124s with images, ~11 calls / ~5s without.<br>
+Expected: image count should add roughly one vision call each, not multiply total count.</p>`;
+    expect(isPreformattedElement(elementFrom(html))).toBe(false);
+    expect(blocksFrom(html)).toEqual([
+      {
+        type: "paragraph",
+        text: "Observed: ~330 calls / ~124s with images, ~11 calls / ~5s without. Expected: image count should add roughly one vision call each, not multiply total count.",
+      },
+    ]);
+  });
+
+  it("rejects a prose paragraph that merely contains a couple of colons", () => {
+    expect(
+      isPreformattedTextLines([
+        "Note: this paragraph is ordinary prose written by a person.",
+        "It happens to contain a colon, and another one here.",
+        "That is not structure, so it must stay a paragraph.",
+        "Otherwise every README would become a code block.",
+      ]),
+    ).toBe(false);
+  });
+
+  it("rejects too few key/value lines to be a block", () => {
+    expect(isPreformattedTextLines(["alpha: 1", "beta: 2", "gamma", "delta"])).toBe(false);
+  });
+
+  it("rejects key/value lines whose values are long prose", () => {
+    const longValue = `value: ${"word ".repeat(50).trim()}`;
+    expect(isPreformattedTextLines([longValue, longValue, longValue, longValue])).toBe(false);
+  });
+});
+
+describe("HQA-02 — a colon-keyed block inside a numbered list", () => {
+  const IN_LIST = `<div><ol>
+<li><p>Configure the parser:<br>parser: mineru<br>mode: auto<br>lang: en<br>detail: low</p></li>
+<li><p>Then run the ingest step.</p></li>
+</ol></div>`;
+
+  it("keeps the block's lines and never resets the numbering", () => {
+    const blocks = blocksFrom(IN_LIST);
+    const lists = blocks.filter((block) => block.type === "list");
+    expect(lists).toHaveLength(1);
+
+    const markdown = serializeContentBlocks(blocks);
+    for (const line of ["parser: mineru", "mode: auto", "lang: en", "detail: low"]) {
+      expect(markdown).toContain(line);
+    }
+    // One ordered list: step 1 keeps its continuation lines, step 2 stays "2.".
+    expect(markdown).toMatch(/^1\. Configure the parser:$/m);
+    expect(markdown).toMatch(/^2\. Then run the ingest step\.$/m);
+  });
+});
+
+describe("HQA-02 — a colon-keyed block outside a list", () => {
+  it("emits a code block directly after the heading", () => {
+    const blocks = blocksFrom(
+      `<div><h2>Environment</h2><p>node: 24.0.0<br>os: windows<br>ram: 32gb<br>disk: ssd</p></div>`,
+    );
+    expect(blocks[0]).toEqual({ type: "heading", level: 2, text: "Environment" });
+    expect(blocks[1]).toEqual({
+      type: "code",
+      code: "node: 24.0.0\nos: windows\nram: 32gb\ndisk: ssd",
+    });
   });
 });
