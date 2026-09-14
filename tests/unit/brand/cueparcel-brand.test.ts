@@ -173,18 +173,75 @@ describe("B. committed icon assets", () => {
   });
 
   it("keeps the header mark geometry identical to the committed master", () => {
-    // The panel inlines the mark for crispness; the two must not drift.
+    // The panel inlines the mark for crispness; the two must not drift. Assert
+    // the actual attributes rather than hardcoded numbers, so a future approved
+    // tweak to the master cannot silently leave the header behind.
     const app = readSource("src", "extension", "sidepanel", "App.tsx");
     const master = readFileSync(join(rootDir, "public", "brand", "cueparcel-mark.svg"), "utf8");
-    const pathOf = (text: string) => {
-      const match = text.match(/d="(M [^"]+)"/);
-      return match?.[1] ?? null;
+    const pathOf = (text: string) => text.match(/d="(M [^"]+)"/)?.[1] ?? null;
+    const circleOf = (text: string) => {
+      const match = text.match(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/);
+      return match === null ? null : { cx: match[1], cy: match[2], r: match[3] };
     };
+
     const masterPath = pathOf(master);
     expect(masterPath).not.toBeNull();
     expect(app).toContain(masterPath as string);
-    expect(app).toContain('r="2.85"');
+
+    const circle = circleOf(master);
+    expect(circle).not.toBeNull();
+    expect(app).toContain(`cx="${circle?.cx}"`);
+    expect(app).toContain(`cy="${circle?.cy}"`);
+    expect(app).toContain(`r="${circle?.r}"`);
     expect(app).toContain('fill="#3157FF"');
+  });
+
+  /**
+   * Logo fidelity (hotfix). The first brand pass drew the cue dot at ~19% of the
+   * C's height and placed it inside the C's cavity, which is not the approved
+   * mark. The approved brand board measures the dot at ~30% of the C's height,
+   * centred 0.77 of the C's outer radius to the RIGHT, so it sits in the open
+   * mouth and reaches past the C's own right edge. These assertions pin those
+   * measured proportions so the artwork cannot quietly regress.
+   */
+  it("keeps the cue dot at the measured approved proportions", () => {
+    const master = readFileSync(join(rootDir, "public", "brand", "cueparcel-mark.svg"), "utf8");
+    const path = master.match(/d="M ([\d.]+) ([\d.]+) A ([\d.]+)/);
+    const circle = master.match(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/);
+    expect(path).not.toBeNull();
+    expect(circle).not.toBeNull();
+
+    const outerR = Number(path?.[3]);
+    const dotR = Number(circle?.[3]);
+    const dotCx = Number(circle?.[1]);
+    const cCx = Number(path?.[1]) - outerR * Math.cos((40 * Math.PI) / 180);
+
+    const dotShareOfHeight = dotR / outerR;
+    expect(dotShareOfHeight).toBeGreaterThanOrEqual(0.28);
+    expect(dotShareOfHeight).toBeLessThanOrEqual(0.32);
+
+    // The dot must be a genuinely separate circle, not a speck.
+    expect(dotR).toBeGreaterThan(4);
+
+    // Distance to the right of the C centre, in units of the C's outer radius.
+    const dotDistanceRatio = (dotCx - cCx) / outerR;
+    expect(dotDistanceRatio).toBeGreaterThan(0.74);
+    expect(dotDistanceRatio).toBeLessThan(0.80);
+
+    // And it must reach past the C's outer edge (approved overhang ~1.1 units).
+    expect(dotCx + dotR).toBeGreaterThan(cCx + outerR);
+  });
+
+  it("keeps the C's stroke at the measured light weight", () => {
+    const master = readFileSync(join(rootDir, "public", "brand", "cueparcel-mark.svg"), "utf8");
+    const path = master.match(/A ([\d.]+) [\d.]+ 0 1 1 [\d.]+ [\d.]+ L [\d.]+ [\d.]+ A ([\d.]+)/);
+    expect(path).not.toBeNull();
+    const outerR = Number(path?.[1]);
+    const innerR = Number(path?.[2]);
+    const strokeOverHeight = (outerR - innerR) / (outerR * 2);
+    // Approved is 11.6%; the first pass was 18.7% (far too heavy).
+    expect(strokeOverHeight).toBeGreaterThan(0.10);
+    expect(strokeOverHeight).toBeLessThan(0.135);
   });
 
   it("never commits a third-party font file", () => {

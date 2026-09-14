@@ -122,8 +122,12 @@ export default function App({
  * `currentColor`, and keeps the Cue Blue dot the single accent.
  *
  * The geometry mirrors public/brand/cueparcel-mark.svg exactly (32x32 viewBox,
- * uniform 5.6 stroke, 78° opening, cue dot r=2.85 at x=21). A unit test pins the
- * two together, so the header can never drift from the committed master.
+ * uniform 3.456 stroke, 80 degree opening, cue dot in the open mouth). Those
+ * numbers are MEASURED from the approved brand board rather than invented: the
+ * dot is ~30% of the C's height and its centre sits 0.77 of the C's outer radius
+ * to the right, so it reads as a distinct cue beside the opening instead of a
+ * small dot lost inside the cavity. A unit test pins this markup to the
+ * committed master, so the header can never drift from the exported asset.
  *
  * Accessibility: the adjacent visible "CueParcel" heading is the accessible
  * name, so this is aria-hidden and must never add a second label.
@@ -139,10 +143,10 @@ function BrandMark() {
       focusable="false"
     >
       <path
-        d="M 27.657 6.56 A 15 15 0 1 1 27.657 25.44 L 23.305 21.916 A 9.4 9.4 0 1 0 23.305 10.084 Z"
+        d="M 27.25 6.101 A 15.4 15.4 0 1 1 27.25 25.899 L 24.509 23.598 A 11.821 11.821 0 1 0 24.509 8.402 Z"
         fill="currentColor"
       />
-      <circle cx="21" cy="16" r="2.85" fill="#3157FF" />
+      <circle cx="27.329" cy="16" r="4.617" fill="#3157FF" />
     </svg>
   );
 }
