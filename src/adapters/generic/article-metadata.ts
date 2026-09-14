@@ -4,6 +4,7 @@
  * it comes from PageContext at the extractor level.
  */
 import { isSafeAbsoluteUrl, normalizeLinkUrl } from "../../core";
+import { isIsoDateTimeString } from "../../core/validation/primitives";
 import { normalizeInlineText } from "../../shared/dom/text";
 
 /** Public fields of Readability's parse() result used by Page2Agent. */
@@ -106,9 +107,10 @@ function resolveAuthor(sourceDocument: Document, article: ReadabilityArticle): s
 }
 
 /**
- * publishedAt only when a reliable source yields a valid ISO-like timestamp.
- * Relative phrases ("3 hours ago") are never guessed; <time> elements are not
- * consulted in V0.1 (documented limitation).
+ * publishedAt only when a reliable source yields a real ISO timestamp.
+ * Relative or rendered phrases ("3 hours ago", "on Aug 28, 2026") are never
+ * guessed, because a source fact must be machine-consumable; <time> elements
+ * are not consulted in V0.1 (documented limitation).
  */
 function resolvePublishedAt(
   sourceDocument: Document,
@@ -120,15 +122,11 @@ function resolvePublishedAt(
     readMetaContent(sourceDocument, 'meta[name="date"]'),
   ];
   for (const candidate of candidates) {
-    if (isValidIsoDateTime(candidate)) {
+    if (typeof candidate === "string" && isIsoDateTimeString(candidate)) {
       return candidate;
     }
   }
   return undefined;
-}
-
-function isValidIsoDateTime(value: string | null | undefined): value is string {
-  return typeof value === "string" && !Number.isNaN(Date.parse(value));
 }
 
 function readMetaContent(sourceDocument: Document, selector: string): string | null {

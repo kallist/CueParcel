@@ -20,7 +20,8 @@ import type {
   TableBlock,
 } from "../../core";
 import { extractCodeBlock } from "./code-block";
-import { getNormalizedText, normalizeInlineText } from "./text";
+import { isPreformattedElement } from "./preformatted";
+import { getNormalizedText, getPreformattedText, normalizeInlineText } from "./text";
 
 const SKIPPED_TAGS = new Set([
   "SCRIPT",
@@ -195,9 +196,20 @@ function pushHeading(
 }
 
 function pushParagraph(element: Element, blocks: ContentBlock[], sourceUrl: string): void {
-  const text = getNormalizedText(element);
-  if (text) {
-    blocks.push({ type: "paragraph", text });
+  // Whitespace-significant text (config blocks, environment dumps, pre-like
+  // content expressed with <br> and indentation) must keep its line structure.
+  // It is emitted as a code block so the breaks stay visible in Markdown
+  // instead of degrading into a single run-on prose line.
+  if (isPreformattedElement(element)) {
+    const code = getPreformattedText(element);
+    if (code.length > 0) {
+      blocks.push({ type: "code", code });
+    }
+  } else {
+    const text = getNormalizedText(element);
+    if (text) {
+      blocks.push({ type: "paragraph", text });
+    }
   }
   // Inline images inside a paragraph are still content references.
   for (const child of element.children) {
@@ -240,7 +252,11 @@ function pushList(element: Element, blocks: ContentBlock[], sourceUrl: string): 
       continue;
     }
     // Nested list markup is flattened into the parent item text (V0.1 flat model).
-    const text = getNormalizedText(child);
+    // An item that carries whitespace-significant content keeps its line
+    // structure so a config block inside a numbered step is not destroyed.
+    const text = isPreformattedElement(child)
+      ? getPreformattedText(child)
+      : getNormalizedText(child);
     if (text) {
       items.push(text);
     }

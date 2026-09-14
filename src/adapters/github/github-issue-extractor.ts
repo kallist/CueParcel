@@ -19,6 +19,7 @@ import {
   Page2AgentError,
   Page2AgentErrorCode,
 } from "../../core";
+import { isIsoDateTimeString } from "../../core/validation/primitives";
 import type {
   DocumentMetadata,
   ExtractionInput,
@@ -29,6 +30,7 @@ import type {
 } from "../../core";
 import { normalizeInlineText } from "../../shared/dom/text";
 import { extractIssueBodyBlocks, isBodyTextEmpty } from "./github-issue-body";
+import { extractLabelsFromContainer } from "./github-labels";
 import {
   EMPTY_BODY_SENTINEL_TEXT,
   firstMatch,
@@ -118,6 +120,11 @@ export class GitHubIssueExtractor implements PageExtractor {
       metadata,
       blocks,
       assets: collectAssetsFromBlocks(blocks),
+      capture: {
+        adapter: { id: "github-issue", name: "GitHub Issue" },
+        method: "full-page",
+        scope: "full-page",
+      },
     };
     if (!isNormalizedDocument(document)) {
       throw new Page2AgentError(Page2AgentErrorCode.INVALID_DOCUMENT);
@@ -133,24 +140,7 @@ export class GitHubIssueExtractor implements PageExtractor {
 }
 
 function extractLabels(sourceDocument: Document): string[] {
-  const container = firstMatch(sourceDocument, ISSUE_LABELS_CONTAINER_SELECTORS);
-  if (container === null) {
-    return [];
-  }
-  const labels: string[] = [];
-  const seen = new Set<string>();
-  for (const element of container.querySelectorAll("a")) {
-    if (element.getAttribute("aria-hidden") === "true") {
-      continue;
-    }
-    const visibleText = element.querySelector('[data-component="Text"]')?.textContent;
-    const text = normalizeInlineText(visibleText ?? element.textContent ?? "");
-    if (text && !seen.has(text)) {
-      seen.add(text);
-      labels.push(text);
-    }
-  }
-  return labels;
+  return extractLabelsFromContainer(sourceDocument, ISSUE_LABELS_CONTAINER_SELECTORS);
 }
 
 /**
@@ -194,17 +184,23 @@ function resolveAuthor(sourceDocument: Document): string | undefined {
   return undefined;
 }
 
+/**
+ * Issue creation time.
+ *
+ * Only a real <time>/<relative-time> `datetime` attribute is accepted: the
+ * VISIBLE text of those elements is a rendered phrase ("on Aug 28, 2026",
+ * "Last edited by …"), and previously the fallback to textContent made the
+ * result depend on which element happened to match first — it produced an
+ * ISO string on one run and a phrase on the next. A source fact must be
+ * deterministic and machine-consumable, so the text fallback is gone.
+ */
 function resolvePublishedAt(sourceDocument: Document): string | undefined {
   for (const selector of ISSUE_CREATED_TIME_SELECTORS) {
-    const element = sourceDocument.querySelector(selector);
-    if (element === null) {
-      continue;
-    }
-    const candidate = normalizeInlineText(
-      element.getAttribute("datetime") ?? element.textContent ?? "",
-    );
-    if (candidate && !Number.isNaN(Date.parse(candidate))) {
-      return candidate;
+    for (const element of sourceDocument.querySelectorAll(selector)) {
+      const datetime = element.getAttribute("datetime");
+      if (datetime !== null && isIsoDateTimeString(datetime)) {
+        return datetime;
+      }
     }
   }
   return undefined;

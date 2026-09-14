@@ -16,6 +16,7 @@ interface Manifest {
   side_panel?: { default_path?: string };
   background?: { service_worker?: string; type?: string };
   content_security_policy?: { extension_pages?: string };
+  commands?: Record<string, { suggested_key?: { default?: string }; description?: string }>;
 }
 
 function loadManifest(): Manifest {
@@ -113,5 +114,66 @@ describe("manifest.json", () => {
     expect(manifest.host_permissions).toBeUndefined();
     expect(e2eBuild).toContain('manifest.host_permissions = ["http://127.0.0.1/*"]');
     expect(e2eBuild).toContain("production manifest unexpectedly already has host_permissions");
+  });
+});
+
+/**
+ * Test 22 — the keyboard shortcut must actually be assignable.
+ *
+ * Human QA measured that Chrome leaves `_execute_action` with an EMPTY shortcut
+ * when the suggested key is Alt+Shift+P, because Chrome reserves that
+ * combination for its own "Pin tab" command. The extension then has no shortcut
+ * at all and the feature silently does nothing, while the manifest still looks
+ * correct. These assertions pin the two things that can be checked without
+ * browser chrome: a valid accelerator shape, and no known Chrome-reserved
+ * combination.
+ */
+describe("manifest.json — keyboard command (Test 22)", () => {
+  const manifest = loadManifest();
+  const command = manifest.commands?.["_execute_action"];
+  const shortcut = command?.suggested_key?.default ?? "";
+
+  /** Chrome accelerators are modifiers plus one key, e.g. "Alt+Shift+Y". */
+  const ACCELERATOR = /^(Ctrl|Alt|Command|MacCtrl)(\+(Shift|Alt|Ctrl|Command|MacCtrl))*\+[A-Z0-9]$/;
+
+  /**
+   * Combinations measured (see E:\dsh work\page-qa\evidence\shortcut-assignment-probe.json)
+   * as left UNASSIGNED by Chrome, plus the reserved browser accelerators. A
+   * suggested_key here silently yields no shortcut.
+   */
+  const RESERVED_OR_UNASSIGNED = [
+    // Chrome's own "Pin tab" — verified to leave the shortcut empty.
+    "Alt+Shift+P",
+    // Verified to leave the shortcut empty.
+    "",
+  ];
+
+  it("declares the action command with a description", () => {
+    expect(command).toBeDefined();
+    expect(command?.description).toBe("Capture the current page with Page2Agent");
+  });
+
+  it("uses a valid Chrome accelerator format", () => {
+    expect(shortcut).toMatch(ACCELERATOR);
+  });
+
+  it("does not use a combination Chrome refuses to assign", () => {
+    expect(RESERVED_OR_UNASSIGNED).not.toContain(shortcut);
+  });
+
+  it("keeps the in-panel hint in sync with the manifest binding", () => {
+    const onboarding = readFileSync(
+      resolve(rootDir, "src", "extension", "sidepanel", "onboarding.ts"),
+      "utf8",
+    );
+    const match = onboarding.match(/SHORTCUT_HINT = "Keyboard: ([^"]+)"/);
+    expect(match).not.toBeNull();
+    // The UI must never advertise a shortcut the manifest does not register.
+    expect(match?.[1]).toBe(shortcut);
+  });
+
+  it("documents the shortcut in the README to match", () => {
+    const readme = readFileSync(resolve(rootDir, "README.md"), "utf8");
+    expect(readme).toContain(shortcut);
   });
 });

@@ -19,6 +19,7 @@ export const CAPTURE_FAILURE = "capture.failure" as const;
 export const CONTENT_CAPTURE_REQUEST = "content.capture.request" as const;
 export const CONTENT_CAPTURE_SUCCESS = "content.capture.success" as const;
 export const CONTENT_CAPTURE_FAILURE = "content.capture.failure" as const;
+export const BADGE_SYNC_REQUEST = "badge.sync.request" as const;
 
 /**
  * E2E harness → Service Worker: emulate the action event with an exact tab.
@@ -67,6 +68,19 @@ export interface ContentCaptureFailure {
   type: typeof CONTENT_CAPTURE_FAILURE;
   captureId: string;
   error: CaptureErrorView;
+}
+
+/**
+ * Side Panel → Service Worker: this window's Cart count changed.
+ *
+ * The panel owns the Cart and therefore reports the authoritative count, while
+ * the worker owns the single global badge and decides whether the window that
+ * authored the count is the one the badge may display (HQA-04).
+ */
+export interface BadgeSyncRequest {
+  type: typeof BADGE_SYNC_REQUEST;
+  windowId: number;
+  count: number;
 }
 
 export type CaptureMessage = HarnessCaptureRequest | CaptureSuccess | CaptureFailure;
@@ -172,5 +186,19 @@ export function isContentCaptureFailure(value: unknown): value is ContentCapture
     value.type === CONTENT_CAPTURE_FAILURE &&
     isNonEmptyString(value.captureId) &&
     isCaptureErrorView(value.error)
+  );
+}
+
+export function isBadgeSyncRequest(value: unknown): value is BadgeSyncRequest {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ["type", "windowId", "count"]) &&
+    value.type === BADGE_SYNC_REQUEST &&
+    typeof value.windowId === "number" &&
+    Number.isSafeInteger(value.windowId) &&
+    value.windowId >= 0 &&
+    typeof value.count === "number" &&
+    Number.isSafeInteger(value.count) &&
+    value.count >= 0
   );
 }

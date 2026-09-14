@@ -39,11 +39,17 @@ export const ISSUE_AUTHOR_SELECTORS = [
   "a.author",
 ] as const;
 
-/** Issue creation time (not comment/edit time). */
+/**
+ * Issue creation time (not comment/edit time). Only elements that expose a
+ * real `datetime` attribute are usable — the visible text is a rendered
+ * phrase.
+ */
 export const ISSUE_CREATED_TIME_SELECTORS = [
   '[data-testid="issue-body"] [data-testid="issue-body-header-link"] relative-time',
+  '[data-testid="issue-body"] relative-time',
   "div.gh-header-meta relative-time",
   "div.gh-header-meta time",
+  "relative-time",
 ] as const;
 
 /** GitHub's rendered empty-issue-body UI text (not author content). */
