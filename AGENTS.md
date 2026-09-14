@@ -1,10 +1,14 @@
-# AGENTS.md — Page2Agent
+# AGENTS.md — CueParcel
 
-> Project: **Page2Agent V1.1 — Visual Context Workbench**
-> Product positioning: **Turn any webpage into agent-ready context.**
+> Project: **CueParcel V1.1 — Visual Context Workbench**
+> Product positioning: **Collect what matters from the web and turn it into
+> structured, source-grounded context for AI.**
 > (V1.1: pick the right context, build the right task, send it to any agent —
 > web pages → structured, source-grounded context and tasks; see
 > `docs/adr/ADR-002-page2agent-v1.1-workbench.md` for the V1.1 decisions.)
+> CueParcel was previously developed as Page2Agent. The historical name is kept
+> throughout this file and the ADRs where it is a stable compatibility identifier
+> (TaskSpec `producer.name`, storage keys, error types) — see `docs/BRAND.md`.
 > This file is the canonical, long-lived engineering contract for all agents and
 > contributors working on this repository. Every stage MUST read it first.
 
@@ -55,7 +59,9 @@
 
 ## 2. Product Definition
 
-- **Positioning:** Turn any webpage into agent-ready context.
+- **Positioning:** Collect what matters from the web and turn it into
+  structured, source-grounded context for AI.
+  (Tagline: *A quieter way to collect what matters.*)
 - **Core execution chain:**
   `Capture → Extract → Normalize → Package → Deliver`
 - **V0.1 core value is NOT "webpage to Markdown".** The real core is:

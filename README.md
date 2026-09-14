@@ -1,15 +1,17 @@
-# Page2Agent
+# CueParcel
 
-> Turn web pages into structured, source-grounded context and tasks for AI agents.
+> A quieter way to collect what matters.
 
-A URL tells an agent *where to look*. Page2Agent tells the agent *what
-matters, what it means, and what to do with it*.
+CueParcel is a local-first Chrome / Edge (Manifest V3) extension that turns web
+sources into structured, source-grounded context and tasks for AI.
 
-Page2Agent is a lightweight, local-first Chrome / Edge (Manifest V3)
-extension that turns web pages into **Visual Context Workbench** output:
-understand the page, pick the parts that matter, combine several sources,
-choose what your agent should do, and inspect exactly what would be sent —
-as agent text, faithful Markdown, or a versioned **TaskSpec** JSON contract.
+A URL tells AI *where to look*. CueParcel helps you choose *what matters*,
+package the right sources, and make the task explicit — as agent text, faithful
+Markdown, or a versioned **TaskSpec** JSON contract.
+
+CueParcel is built around the **Visual Context Workbench** flow: understand the
+page, pick the parts that matter, combine several sources, choose what your
+agent should do, and inspect exactly what would be sent.
 
 ## The six V1.1 capabilities
 
@@ -31,7 +33,7 @@ as agent text, faithful Markdown, or a versioned **TaskSpec** JSON contract.
    (sources, roles, provenance, adapter-verified source facts, explicit
    acceptance criteria only when the source really provides them, unknowns,
    generated instructions, token estimates) consumable by other tools (e.g.
-   ContextForge) without Page2Agent internals.
+   ContextForge) without CueParcel internals.
 6. **Context Receipt + Nutrition Label** — a compact summary of exactly what the
    agent will receive (total-context tokens and the source/generated/metadata
    split), expanding into Included/Excluded facts, Generated vs Source
@@ -85,17 +87,17 @@ npm run build
 Chrome: open `chrome://extensions` → enable **Developer mode** → **Load
 unpacked** → select the `dist/` folder. Edge: the same at `edge://extensions`.
 
-## Access: pin Page2Agent once
+## Access: pin CueParcel once
 
 The toolbar action is the product's entry point, so pin it for one-click access:
 
 1. Click the **Extensions** (puzzle-piece) icon in the browser toolbar.
-2. Click the **pin** next to **Page2Agent**.
-3. From then on: click the Page2Agent icon on any page → capture runs → the
+2. Click the **pin** next to **CueParcel**.
+3. From then on: click the CueParcel icon on any page → capture runs → the
    Side Panel opens.
 
-**Page2Agent cannot pin itself.** Pinning is an explicit user decision in the
-browser's own UI, and an extension cannot perform it. When Page2Agent detects it
+**CueParcel cannot pin itself.** Pinning is an explicit user decision in the
+browser's own UI, and an extension cannot perform it. When CueParcel detects it
 is not pinned it shows a short, dismissible getting-started card saying exactly
 that, and falls quiet once dismissed.
 
@@ -115,7 +117,7 @@ that, and falls quiet once dismissed.
 ### Fix an issue with supporting docs
 
 1. Open the GitHub issue you need to fix.
-2. Click the Page2Agent toolbar icon on that tab — the Side Panel opens,
+2. Click the CueParcel toolbar icon on that tab — the Side Panel opens,
    capture runs, and the issue is identified.
 3. **Pick Context** — click only the relevant parts of the issue on the page,
    then **Done** in the lens dock, and **Add to Context**.
@@ -185,7 +187,7 @@ Toolbar gesture → Capture → Semantic Adapter → NormalizedDocument
   script capture + lens engine, Side Panel workbench UI, session/cart storage,
   toolbar badge and pin onboarding.
 
-Source content, source-derived facts and Page2Agent-generated instructions
+Source content, source-derived facts and CueParcel-generated instructions
 are strictly separated in every layer; the prompt-injection trust boundary
 applies to every source in the cart.
 
@@ -245,13 +247,30 @@ container.
 
 ## Ecosystem boundary
 
-Page2Agent produces TaskSpec + web context. Repository retrieval is a
+CueParcel produces TaskSpec + web context. Repository retrieval is a
 separate project's concern:
 
 ```text
-Page2Agent    Web → TaskSpec
+CueParcel     Web → TaskSpec
 ContextForge  TaskSpec + Repository → Repository Context
 ```
+
+## Brand / compatibility note
+
+CueParcel was previously developed as Page2Agent. The public product, the
+extension metadata and the user-facing output are now CueParcel.
+
+TaskSpec schema v1.0 intentionally retains:
+
+```json
+"producer": { "name": "Page2Agent", "version": "1.1.0" }
+```
+
+`producer.name` is part of the serialized machine-readable contract, so an
+external consumer may already branch on the exact value. Changing it without
+versioning the protocol would be a silent compatibility break, therefore it is
+kept as a stable serialized identifier. This is not stale branding and must not
+be mass-replaced.
 
 ## License
 

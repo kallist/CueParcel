@@ -1,11 +1,11 @@
-# Page2Agent V1.1 — User Guide
+# CueParcel V1.1 — User Guide
 
-Page2Agent turns pages into structured, source-grounded context and tasks for
+CueParcel turns pages into structured, source-grounded context and tasks for
 AI agents: **Pick → Add → Choose Task → Copy**.
 
 ## 1. Capture a page
 
-Click the Page2Agent toolbar icon **on the page you care about**. The Side
+Click the CueParcel toolbar icon **on the page you care about**. The Side
 Panel opens and capture starts automatically for that exact tab.
 
 The panel then shows the **source card** (page type, adapter, URL, capture
@@ -43,10 +43,10 @@ selection it shows **+ Add selection to Context** — no lens needed.
 
 ## 4. Choose what the agent should do (Recipes)
 
-Pick one of five: Learn, Compare, Verify, Build, Fix. Page2Agent recommends a
+Pick one of five: Learn, Compare, Verify, Build, Fix. CueParcel recommends a
 recipe based on the adapters (e.g. issue → Fix, docs → Build, article →
 Learn) — the choice is always yours. Compare is disabled until the cart has
-two sources; Page2Agent never fabricates comparisons or requirements.
+two sources; CueParcel never fabricates comparisons or requirements.
 
 ## 5. Inspect (Agent | Markdown | TaskSpec + Context Receipt)
 
@@ -59,7 +59,7 @@ Three preview tabs always show what would be sent:
   with **Copy JSON** / **Download JSON**.
 
 The **Context Receipt** below lists observable facts: what is Included vs
-Excluded, what Page2Agent Generated, what remains Unknown, estimated tokens
+Excluded, what CueParcel Generated, what remains Unknown, estimated tokens
 and a deterministic Context facts block (source/generated/metadata share
 bars, counts, explicit acceptance criteria ✓/✗/—, provenance, status).
 
@@ -72,6 +72,6 @@ bars, counts, explicit acceptance criteria ✓/✗/—, provenance, status).
 ## Trust & privacy notes
 
 - Source content on web pages is **untrusted data**: instructions found on a
-  page are never treated as higher-priority instructions by Page2Agent.
+  page are never treated as higher-priority instructions by CueParcel.
 - Everything runs locally. No backend, no accounts, no sync, no telemetry.
 - Token numbers are heuristic **estimates**, not model tokenizer output.
