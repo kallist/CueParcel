@@ -99,11 +99,15 @@ browser's own UI, and an extension cannot perform it. When Page2Agent detects it
 is not pinned it shows a short, dismissible getting-started card saying exactly
 that, and falls quiet once dismissed.
 
-- **Keyboard shortcut:** `Alt+Shift+P` captures the current page without the
-  toolbar (reassignable at `chrome://extensions/shortcuts`).
-- **Toolbar badge:** shows the number of sources in this window's Context Cart,
-  so you can see at a glance whether context is assembled. Window-scoped: one
-  window's cart never paints another window's badge.
+- **Keyboard shortcut:** `Alt+Shift+Y` captures the current page without the
+  toolbar (reassignable at `chrome://extensions/shortcuts`). `Alt+Shift+P` is
+  deliberately avoided: Chrome reserves it for its own "Pin tab" command, so a
+  suggested key of `Alt+Shift+P` is silently left unassigned and the shortcut
+  never works.
+- **Toolbar badge:** shows the number of sources in the focused window's Context
+  Cart, so you can see at a glance whether context is assembled. Chrome has no
+  per-window action badge, so the single badge always shows the focused window's
+  count and a background window can never paint it.
 - The Extensions menu remains the fallback entry point.
 
 ## Usage

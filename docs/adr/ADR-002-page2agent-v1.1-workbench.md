@@ -223,15 +223,29 @@ preview inside a 1511px document formed a nested scroll trap.
 
 ### D19 — Toolbar access is honest about pinning
 
-A badge mirror of the window's Cart count, a dismissible pin onboarding driven
-by `chrome.action.getUserSettings()`, and an `Alt+Shift+P` `_execute_action`
-shortcut. No new permission was added.
+A badge mirror of the focused window's Cart count, a dismissible pin onboarding
+driven by `chrome.action.getUserSettings()`, and an `Alt+Shift+Y`
+`_execute_action` shortcut. No new permission was added.
 
 Why: the toolbar action is the only entry point, and an extension cannot pin
 itself. When the API is absent or the state is unknown, Page2Agent shows nothing
 rather than guessing; the copy states that Chrome requires the user to pin it.
-The badge is written by the window's own Side Panel with every Action call
-scoped to that window, so one window's cart can never paint another's badge.
+
+Superseded by human-QA findings HQA-04 and Test 22 (same branch, before merge):
+
+- **The badge is global, not per-window.** Chrome rejects
+  `chrome.action.setBadgeText({ windowId })` with "Unexpected property:
+  'windowId'", so the original per-window write silently never painted anything.
+  There is no per-window action badge to use. The badge therefore shows the
+  FOCUSED window's Cart count, written by that window's own Side Panel and
+  refreshed by the Service Worker on `chrome.windows.onFocusChanged`, so a
+  background window's cart can never paint the count the user is looking at.
+  Per-window Cart *state* is unchanged (one `chrome.storage.session` key per
+  window).
+- **The shortcut is `Alt+Shift+Y`.** Chrome reserves `Alt+Shift+P` for its own
+  "Pin tab" command, and a `suggested_key` that collides is left unassigned —
+  `chrome.commands.getAll()` reported an empty shortcut, so the advertised
+  `Alt+Shift+P` did nothing.
 
 ### D20 — Premium graphite visual system
 
