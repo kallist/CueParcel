@@ -1,5 +1,5 @@
 /**
- * Page2Agent Side Panel — V1.1 Visual Context Workbench.
+ * CueParcel Side Panel — V1.1 Visual Context Workbench.
  *
  * Layout (top to bottom):
  *   header → capture state (idle/capturing/error) OR captured workbench:
@@ -49,7 +49,7 @@ import {
   createProductionToolbarDeps,
 } from "./workbench-ui/toolbar-deps";
 import type { ToolbarDeps } from "./workbench-ui/toolbar-deps";
-import { ONBOARDING_STEPS, PIN_HINT_TEXT, SHORTCUT_HINT } from "./onboarding";
+import { BRAND_TAGLINE, ONBOARDING_STEPS, PIN_HINT_TEXT, SHORTCUT_HINT } from "./onboarding";
 import type { OnboardingDecision } from "./onboarding";
 import type { CaptureResult } from "../capture/capture-result";
 
@@ -91,7 +91,10 @@ export default function App({
     <main className="panel">
       <header className="panel-header">
         <Aurora />
-        <h1>Page2Agent</h1>
+        <div className="brand-lockup">
+          <BrandMark />
+          <h1>CueParcel</h1>
+        </div>
         <span className="panel-version">Visual Context Workbench</span>
       </header>
 
@@ -108,6 +111,39 @@ export default function App({
         />
       )}
     </main>
+  );
+}
+
+/**
+ * CueParcel brand mark — the open "C" with the Cue Blue cue dot.
+ *
+ * Inline vector rather than an <img>: the mark is two shapes of pure geometry,
+ * so inlining keeps it crisp at any size, lets the C follow the theme through
+ * `currentColor`, and keeps the Cue Blue dot the single accent.
+ *
+ * The geometry mirrors public/brand/cueparcel-mark.svg exactly (32x32 viewBox,
+ * uniform 5.6 stroke, 78° opening, cue dot r=2.85 at x=21). A unit test pins the
+ * two together, so the header can never drift from the committed master.
+ *
+ * Accessibility: the adjacent visible "CueParcel" heading is the accessible
+ * name, so this is aria-hidden and must never add a second label.
+ */
+function BrandMark() {
+  return (
+    <svg
+      className="brand-mark"
+      viewBox="0 0 32 32"
+      width="22"
+      height="22"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M 27.657 6.56 A 15 15 0 1 1 27.657 25.44 L 23.305 21.916 A 9.4 9.4 0 1 0 23.305 10.084 Z"
+        fill="currentColor"
+      />
+      <circle cx="21" cy="16" r="2.85" fill="#3157FF" />
+    </svg>
   );
 }
 
@@ -155,9 +191,14 @@ function PinOnboarding({ toolbar }: { toolbar: ToolbarDeps }) {
   return (
     <section className="onboarding" aria-label="Getting started">
       <ParticleAtmosphere />
-      <h2>Welcome to Page2Agent</h2>
-      <p className="onboarding-lead">
-        Turn the web into context your agents can actually use.
+      <div className="onboarding-brand">
+        <BrandMark />
+        <h2>CueParcel</h2>
+      </div>
+      <p className="onboarding-lead">{BRAND_TAGLINE}</p>
+      <p className="onboarding-sub">
+        Capture a page, pick what matters, combine sources, and prepare structured
+        context for AI.
       </p>
       <ol className="onboarding-steps">
         {ONBOARDING_STEPS.map((step) => (
@@ -189,9 +230,9 @@ function IdleView() {
         </svg>
       </div>
       <h2>No page captured yet</h2>
-      <p>Click the Page2Agent toolbar icon on the page you want to understand.</p>
+      <p>Click the CueParcel toolbar icon on the page you want to understand.</p>
       <ol className="steps">
-        <li><strong>Capture</strong> — Page2Agent identifies the page type</li>
+        <li><strong>Capture</strong> — CueParcel identifies the page type</li>
         <li><strong>Pick</strong> — choose sections with Context Lens</li>
         <li><strong>Combine</strong> — add pages to the Context Cart</li>
         <li><strong>Task</strong> — pick what your agent should do</li>
@@ -215,7 +256,7 @@ function ErrorView({ message }: { message: string }) {
     <section className="status-panel" aria-live="polite">
       <div className="status-mark status-mark-error" aria-hidden="true">!</div>
       <p className="error-text">{message}</p>
-      <p className="muted">Click the Page2Agent toolbar icon to try again.</p>
+      <p className="muted">Click the CueParcel toolbar icon to try again.</p>
     </section>
   );
 }
@@ -701,7 +742,7 @@ function PreviewTabs({
     if (content === null) {
       return;
     }
-    const slug = filenameBase || "page2agent";
+    const slug = filenameBase || "cueparcel";
     if (activeTab === "taskspec") {
       const spec = JSON.parse(outputs.taskSpecJson!) as TaskSpec;
       downloadJson(buildTaskSpecFilename(spec), content);

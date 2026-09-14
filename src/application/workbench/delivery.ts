@@ -43,7 +43,7 @@ export const CAPTURE_METHOD_LABELS: Record<
 export function serializeAgentContext(spec: TaskSpec): string {
   const sections: string[] = [];
 
-  sections.push("# Page2Agent Task");
+  sections.push("# CueParcel Task");
   sections.push(serializeTaskBlock(spec));
 
   sections.push("## Task Instructions");
@@ -169,6 +169,6 @@ function titleCase(value: string): string {
 
 /** Deterministic download filename for the TaskSpec JSON. */
 export function buildTaskSpecFilename(spec: TaskSpec): string {
-  const base = sanitizeBaseName(spec.task.title) || "page2agent-task";
+  const base = sanitizeBaseName(spec.task.title) || "cueparcel-task";
   return `${base}-taskspec.json`;
 }

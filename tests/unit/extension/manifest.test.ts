@@ -47,9 +47,9 @@ describe("manifest.json", () => {
   const manifest = loadManifest();
   const pkg = loadPackageJson();
 
-  it("is a Manifest V3 extension named Page2Agent", () => {
+  it("is a Manifest V3 extension named CueParcel", () => {
     expect(manifest.manifest_version).toBe(3);
-    expect(manifest.name).toBe("Page2Agent");
+    expect(manifest.name).toBe("CueParcel");
   });
 
   it("version matches package.json version", () => {
@@ -150,7 +150,7 @@ describe("manifest.json — keyboard command (Test 22)", () => {
 
   it("declares the action command with a description", () => {
     expect(command).toBeDefined();
-    expect(command?.description).toBe("Capture the current page with Page2Agent");
+    expect(command?.description).toBe("Capture the current page with CueParcel");
   });
 
   it("uses a valid Chrome accelerator format", () => {

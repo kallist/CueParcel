@@ -39,10 +39,10 @@ describe("serializeAgentPackage — generic", () => {
   it("emits the fixed section order without a Source AC section", () => {
     const output = serializeAgentPackage(buildAgentPackage(makeWebDocument()));
 
-    expect(output.startsWith("# Page2Agent Context")).toBe(true);
+    expect(output.startsWith("# CueParcel Context")).toBe(true);
     const order = [
-      "# Page2Agent Context",
-      "## Page2Agent Agent Instructions",
+      "# CueParcel Context",
+      "## CueParcel Agent Instructions",
       "## Source",
       "## Title",
       "## Content",
@@ -65,7 +65,7 @@ describe("serializeAgentPackage — generic", () => {
 
   it("places generated instructions before source content", () => {
     const output = serializeAgentPackage(buildAgentPackage(makeWebDocument()));
-    expect(output.indexOf("## Page2Agent Agent Instructions")).toBeLessThan(
+    expect(output.indexOf("## CueParcel Agent Instructions")).toBeLessThan(
       output.indexOf("## Source"),
     );
   });

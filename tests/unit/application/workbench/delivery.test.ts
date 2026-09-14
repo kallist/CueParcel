@@ -49,7 +49,7 @@ function specFor(recipe: "learn" | "compare" | "fix", cart: ContextCart) {
 describe("serializeAgentContext", () => {
   it("partitions generated facts from source content for a single issue", () => {
     const agent = serializeAgentContext(specFor("fix", cartWithOneIssue()));
-    expect(agent.startsWith("# Page2Agent Task\n")).toBe(true);
+    expect(agent.startsWith("# CueParcel Task\n")).toBe(true);
     expect(agent).toContain("Recipe: Fix");
     expect(agent).toContain("Task kind: fix_issue");
     expect(agent).toContain("## Task Instructions");

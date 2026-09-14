@@ -47,13 +47,13 @@ describe("sanitizeBaseName", () => {
   });
 
   it("prefixes reserved Windows device names", () => {
-    expect(sanitizeBaseName("CON")).toBe("page2agent-con");
-    expect(sanitizeBaseName("con")).toBe("page2agent-con");
-    expect(sanitizeBaseName("PRN")).toBe("page2agent-prn");
-    expect(sanitizeBaseName("AUX")).toBe("page2agent-aux");
-    expect(sanitizeBaseName("NUL")).toBe("page2agent-nul");
-    expect(sanitizeBaseName("COM1")).toBe("page2agent-com1");
-    expect(sanitizeBaseName("LPT9")).toBe("page2agent-lpt9");
+    expect(sanitizeBaseName("CON")).toBe("cueparcel-con");
+    expect(sanitizeBaseName("con")).toBe("cueparcel-con");
+    expect(sanitizeBaseName("PRN")).toBe("cueparcel-prn");
+    expect(sanitizeBaseName("AUX")).toBe("cueparcel-aux");
+    expect(sanitizeBaseName("NUL")).toBe("cueparcel-nul");
+    expect(sanitizeBaseName("COM1")).toBe("cueparcel-com1");
+    expect(sanitizeBaseName("LPT9")).toBe("cueparcel-lpt9");
     expect(sanitizeBaseName("console")).toBe("console"); // not reserved
   });
 });
@@ -66,8 +66,8 @@ describe("buildMarkdownFilename", () => {
   });
 
   it("falls back for empty titles", () => {
-    expect(buildMarkdownFilename(makeWebDocument("   "))).toBe("page2agent.md");
-    expect(buildMarkdownFilename(makeWebDocument("<>:"))).toBe("page2agent.md");
+    expect(buildMarkdownFilename(makeWebDocument("   "))).toBe("cueparcel.md");
+    expect(buildMarkdownFilename(makeWebDocument("<>:"))).toBe("cueparcel.md");
   });
 
   it("keeps the .md extension exactly once", () => {

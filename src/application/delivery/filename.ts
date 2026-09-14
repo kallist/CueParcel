@@ -10,7 +10,7 @@ import type { NormalizedDocument } from "../../core";
 const INVALID_FILENAME_CHARACTERS = /[<>:"/\\|?*]/g;
 const RESERVED_WINDOWS_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 const MAX_BASE_LENGTH = 120;
-const FALLBACK_BASE = "page2agent";
+const FALLBACK_BASE = "cueparcel";
 
 /** Replace control characters (code points < 0x20) with "-". */
 function mapControlCharacters(value: string): string {

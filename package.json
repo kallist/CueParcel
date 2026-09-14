@@ -1,9 +1,9 @@
 {
-  "name": "page2agent",
+  "name": "cueparcel",
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "Turn web pages into structured, source-grounded context and tasks for AI agents.",
+  "description": "Collect what matters from the web and turn it into structured, source-grounded context for AI.",
   "engines": {
     "node": ">=24.0.0"
   },
