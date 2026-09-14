@@ -1,14 +1,20 @@
 /**
- * Context Cart session persistence (V1.1) — Side Panel ownership.
+ * Context Cart session persistence (V1.1).
  *
- * The Cart is a pure panel-side domain model; this module adapts it to
+ * The Cart is a pure domain model; this module adapts it to
  * chrome.storage.session under one key per browser window (session-only,
  * local-first, cleared on browser shutdown). Invalid or missing records
  * degrade to an empty cart — never a crash, never a guessed cart.
+ *
+ * Lives in the SESSION layer, not under sidepanel/: the Side Panel is the only
+ * writer, but the Service Worker legitimately needs to READ a window's Cart to
+ * keep the single global toolbar badge truthful when focus changes (HQA-04).
+ * Putting it here keeps that direction clean instead of making the background
+ * depend on Side Panel UI code.
  */
-import { createEmptyCart, isContextCart } from "../../../core";
-import type { ContextCart } from "../../../core";
-import type { SessionStorage } from "../../session/session-storage";
+import { createEmptyCart, isContextCart } from "../../core";
+import type { ContextCart } from "../../core";
+import type { SessionStorage } from "./session-storage";
 
 export const WORKBENCH_CART_SCHEMA_VERSION = 1 as const;
 export const WORKBENCH_CART_KEY_PREFIX = "page2agent.workbench.cart.v1.";

@@ -11,7 +11,7 @@ import type { PanelLensClient } from "../../../../src/extension/sidepanel/workbe
 import type { WorkbenchDeps } from "../../../../src/extension/sidepanel/use-workbench";
 import type { CaptureResult } from "../../../../src/extension/capture/capture-result";
 import { windowDocumentKey } from "../../../../src/extension/session/document-cache";
-import { workbenchCartKey } from "../../../../src/extension/sidepanel/workbench/cart-session";
+import { workbenchCartKey } from "../../../../src/extension/session/cart-session";
 import type { ToolbarDeps } from "../../../../src/extension/sidepanel/workbench-ui/toolbar-deps";
 
 const SESSION_DEPS: CaptureSessionDeps = {

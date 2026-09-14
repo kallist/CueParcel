@@ -3,11 +3,14 @@
  *
  * Kept in one module so App stays testable with fakes: the panel never touches
  * `chrome.*` directly for these features.
+ *
+ * Badge ownership (HQA-04): Chrome has no per-window action badge, so the
+ * panel cannot paint "its own" badge. It reports its authoritative Cart count
+ * to the Service Worker, which decides whether this panel's window is the
+ * focused one and therefore whether the count may be displayed. The panel keeps
+ * owning the Cart; the worker owns the single global badge.
  */
-import { createBadgeSync } from "../../background/badge";
-import type { BadgeSync } from "../../background/badge";
-import { readCart } from "../workbench/cart-session";
-import { chromeSessionStorage } from "../../session/session-storage";
+import { BADGE_SYNC_REQUEST } from "../../messaging/runtime-messages";
 import {
   dismissOnboarding,
   resolveOnboardingDecision,
@@ -26,8 +29,14 @@ const chromeLocalStorage = {
 };
 
 export interface ToolbarDeps {
-  /** Mirror the Cart count onto this window's toolbar badge. */
-  syncBadge(windowId: number): Promise<void>;
+  /**
+   * Report this window's authoritative Context Cart count.
+   *
+   * The count is the panel's live in-memory Cart length, so the badge never
+   * races a storage write. `windowId` identifies the author so the worker can
+   * reject a count belonging to a window the user is not looking at.
+   */
+  syncBadge(windowId: number, count: number): Promise<void>;
   /** Should the pin onboarding be shown for this window? */
   onboardingDecision(): Promise<OnboardingDecision>;
   dismissOnboarding(): Promise<void>;
@@ -36,11 +45,6 @@ export interface ToolbarDeps {
 }
 
 export function createProductionToolbarDeps(): ToolbarDeps {
-  const badge: BadgeSync = createBadgeSync({
-    action: typeof chrome !== "undefined" ? chrome.action : undefined,
-    readCart: (windowId) => readCart(chromeSessionStorage, windowId),
-  });
-
   async function currentWindowId(): Promise<number | null> {
     try {
       const browserWindow = await chrome.windows.getCurrent();
@@ -54,7 +58,18 @@ export function createProductionToolbarDeps(): ToolbarDeps {
   }
 
   return {
-    syncBadge: (windowId) => badge.sync(windowId),
+    async syncBadge(windowId, count): Promise<void> {
+      try {
+        await chrome.runtime.sendMessage({
+          type: BADGE_SYNC_REQUEST,
+          windowId,
+          count,
+        });
+      } catch {
+        // The badge is a convenience signal: a messaging failure must never
+        // disturb the Cart or the panel.
+      }
+    },
     onboardingDecision: () =>
       resolveOnboardingDecision({
         action: typeof chrome !== "undefined" ? chrome.action : undefined,

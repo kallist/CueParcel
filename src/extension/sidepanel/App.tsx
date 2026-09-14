@@ -234,12 +234,14 @@ function WorkbenchView({
   const [copied, setCopied] = useState<string | null>(null);
 
   /**
-   * Keep this window's toolbar badge equal to this window's Cart count.
+   * Keep this window's Cart count visible on the single global toolbar badge.
    *
-   * Ownership: the panel resolves its OWN window id and the Badge API scopes
-   * the text to it, so window A's Cart can never paint window B's badge. The
-   * count is derived from the live Cart, so add / remove / undo / clear /
-   * restore all converge on the same value.
+   * Ownership (HQA-04): the panel resolves its OWN window id, reports its live
+   * in-memory Cart length, and the worker displays it only while this window is
+   * the focused one — Chrome has no per-window action badge, so a background
+   * window must never paint the count the user is looking at. The count is
+   * derived from the live Cart, so add / remove / undo / clear / restore all
+   * converge on the same value.
    */
   const cartCount = workbench.cart.items.length;
   useEffect(() => {
@@ -248,7 +250,7 @@ function WorkbenchView({
       if (cancelled || windowId === null) {
         return;
       }
-      void toolbar.syncBadge(windowId);
+      void toolbar.syncBadge(windowId, cartCount);
     });
     return () => {
       cancelled = true;

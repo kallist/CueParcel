@@ -16,7 +16,7 @@ import {
 } from "./workbench/workbench-model";
 import type { WorkbenchOutputs } from "./workbench/workbench-model";
 import { readWindowDocumentForCapture } from "../session/document-cache";
-import { readCart, saveCart } from "./workbench/cart-session";
+import { readCart, saveCart } from "../session/cart-session";
 import type { PanelLensClient } from "./workbench/lens-client";
 import type { SessionStorage } from "../session/session-storage";
 import type { CaptureResult } from "../capture/capture-result";

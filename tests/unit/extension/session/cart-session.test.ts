@@ -4,10 +4,10 @@ import {
   saveCart,
   workbenchCartKey,
   clearCartRecord,
-} from "../../../../../src/extension/sidepanel/workbench/cart-session";
-import type { SessionStorage } from "../../../../../src/extension/session/session-storage";
-import { addContextSource, createEmptyCart } from "../../../../../src/core";
-import { makeFullPageItem, makeSelectionItem } from "../../../../../tests/helpers/workbench-fixtures";
+} from "../../../../src/extension/session/cart-session";
+import type { SessionStorage } from "../../../../src/extension/session/session-storage";
+import { addContextSource, createEmptyCart } from "../../../../src/core";
+import { makeFullPageItem, makeSelectionItem } from "../../../helpers/workbench-fixtures";
 
 function fakeStorage(): SessionStorage & { data: Record<string, unknown> } {
   const data: Record<string, unknown> = {};
