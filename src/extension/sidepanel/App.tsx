@@ -122,12 +122,16 @@ export default function App({
  * `currentColor`, and keeps the Cue Blue dot the single accent.
  *
  * The geometry mirrors public/brand/cueparcel-mark.svg exactly (32x32 viewBox,
- * uniform 3.456 stroke, 80 degree opening, cue dot in the open mouth). Those
- * numbers are MEASURED from the approved brand board rather than invented: the
- * dot is ~30% of the C's height and its centre sits 0.77 of the C's outer radius
- * to the right, so it reads as a distinct cue beside the opening instead of a
- * small dot lost inside the cavity. A unit test pins this markup to the
- * committed master, so the header can never drift from the exported asset.
+ * 3.456 stroke, 80 degree opening, cue dot in the open mouth). Those numbers are
+ * MEASURED from the approved brand board rather than invented: the dot is ~30% of
+ * the C's height and its centre sits 0.77 of the C's outer radius to the right, so
+ * it reads as a distinct cue beside the opening instead of a small dot lost inside
+ * the cavity. A unit test pins this markup to the committed master, so the header
+ * can never drift from the exported asset.
+ *
+ * The C's body is TWO arc commands on purpose: an SVG arc cannot span more than
+ * 180 degrees, and a single large-arc command silently renders the 80 degree
+ * COMPLEMENT, which collapses the C into two stub ends. Keep the split.
  *
  * Accessibility: the adjacent visible "CueParcel" heading is the accessible
  * name, so this is aria-hidden and must never add a second label.
@@ -143,10 +147,10 @@ function BrandMark() {
       focusable="false"
     >
       <path
-        d="M 27.25 6.101 A 15.4 15.4 0 1 1 27.25 25.899 L 24.509 23.598 A 11.821 11.821 0 1 0 24.509 8.402 Z"
+        d="M 26.865 6.44 A 14.872 14.872 0 0 0 0.6 16 A 14.872 14.872 0 0 0 26.865 25.56 L 24.217 23.338 A 11.416 11.416 0 0 1 4.056 16 A 11.416 11.416 0 0 1 24.217 8.662 Z"
         fill="currentColor"
       />
-      <circle cx="27.329" cy="16" r="4.617" fill="#3157FF" />
+      <circle cx="26.941" cy="16" r="4.459" fill="#224AE6" />
     </svg>
   );
 }
@@ -180,8 +184,10 @@ function PinOnboarding({ toolbar }: { toolbar: ToolbarDeps }) {
 
   if (decision.showPinHint) {
     return (
+      // No decorative glyph here: a "✦" sparkle sat in front of this hint and
+      // read as a tiny particle mark next to the brand, which the approved logo
+      // deliberately does not have.
       <p className="pin-hint" role="note">
-        <span aria-hidden="true">✦</span>
         {PIN_HINT_TEXT}
       </p>
     );

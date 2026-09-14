@@ -22,7 +22,7 @@
  *   opening     : 80 deg of the arc missing, centred on 0 deg (+x axis)
  *
  * Normalised so the C's outer diameter is 32 units (1 unit = 6.64 reference px),
- * with the C centred on the origin:
+ * with the C centred on the origin, the ratios are:
  *
  *   outer radius      16.00 units
  *   stroke             3.70 units   (11.6% of the C's height)
@@ -32,12 +32,20 @@
  *   dot centre        12.41 units from the C centre, on the +x axis
  *   dot clearance      1.26 units of negative space between dot and C
  *
+ * Those reference units are NOT the emitted ones. The emitted mark is refitted
+ * into a 32-unit viewBox WITH margin, so the C comes out at 29.744 units and the
+ * dot at 8.918; the ratios above are what is preserved exactly (see the measured
+ * ratio constants below). The script prints the emitted geometry on every run.
+ *
  * The dot therefore sits BESIDE the C's open mouth, not inside its cavity — that
  * offset is the whole point of the mark and is why it reads as "a cue entering
  * the C" rather than a ringed dot.
  * ===========================================================================
  *
  * Usage: node scripts/generate-brand-assets.mjs
+ *        node scripts/generate-brand-assets.mjs --dump-html <size>   (debug: print
+ *        the exact rasterisation page for one icon size and paint it, without
+ *        touching any committed file)
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -49,12 +57,27 @@ const BRAND_DIR = join(root, "public", "brand");
 const ICON_DIR = join(root, "public", "icons");
 
 // ---------------------------------------------------------------- palette ---
-const INK = "#111318";
-const CUE_BLUE = "#3157FF";
-const PAPER = "#F7F7F4";
-const MARK_LIGHT = INK; // mark on light backgrounds
-const MARK_DARK = "#F2F3F5"; // mark on dark backgrounds
-const TILE = PAPER; // extension icon tile
+/**
+ * Colours are SAMPLED from the approved brand board's own pixels (see
+ * sample-brand-colours.mjs): the mark's C is #141720 and its cue dot is #224AE6
+ * on a #FFFFFF board. Nothing here is a guess.
+ *
+ * CONTRAST RULE (why there are three C colours and only one dot colour):
+ * the approved near-black C has 15.85:1 contrast on light chrome but only
+ * 1.12:1 on dark chrome, so a single near-black icon all but disappears in a
+ * dark browser. The extension icon is therefore drawn in a restrained
+ * medium cool-slate that clears BOTH chromes, and never with a background tile
+ * as a workaround. The cue dot stays the same vivid blue in every variant.
+ *
+ *   measured C #141720  vs light chrome 15.85:1 / vs dark chrome  1.12:1  (invisible)
+ *   toolbar  C #66779A  vs light chrome  3.98:1 / vs dark chrome  3.54:1  (balanced)
+ *   dot      #224AE6    vs light chrome  5.83:1 / vs dark chrome  2.42:1
+ */
+const CUE_BLUE = "#224AE6"; // sampled from the reference dot
+const MARK_LIGHT = "#141720"; // sampled from the reference C — light surfaces
+const MARK_DARK = "#F2F3F5"; // off-white C — dark surfaces (Side Panel)
+const MARK_TOOLBAR = "#66779A"; // contrast adaptation for the transparent icon only
+const WORDMARK_INK = "#141720";
 
 /** Round to 3 decimals so every emitted attribute is legible and stable. */
 const round = (n) => Number(n.toFixed(3));
@@ -75,21 +98,38 @@ const DOT_DISTANCE_RATIO = 0.7712;
 const GAP_HALF_DEG = 40; // 80 deg opening, centred on +x
 
 /**
- * Fit the drawn bounds into the master viewBox.
+ * Fit the drawn lockup into the master viewBox.
  *
- * The lockup spans: left edge of the C at -outerR, right edge of the dot at
- * +(dotDistance + dotR), and -outerR..+outerR vertically. So it is 2.142 outerR
- * wide and 2 outerR tall — almost square, and it fits without downscaling.
+ * The horizontal extents are measured from the C's centre, in outerR units:
  *
- * CENTRE_X places the C's centre so the drawn span is centred in the viewBox.
+ *   left  = 1                      the C's own outer edge
+ *   right = max(arc, dot)          whichever reaches further:
+ *           arc = cos(40) + stroke/2 = 0.766 + 0.116 = 0.882
+ *           dot = dotDistance + dotR = 0.771 + 0.300 = 1.071   <- the wider one
+ *
+ * So the mark spans 2.071 outerR across, not the 2.142 that assuming the dot is
+ * the rightmost element gives, and NOT 1 + 1.112 either: the right extent is
+ * measured to the DOT's edge while the left is measured to the C's. Deriving
+ * outerR from that span keeps the mark centred with equal side margins; getting
+ * this wrong is what previously pushed the dot outside the viewBox and clipped
+ * the C against the icon edge.
  */
 const VIEW = 32;
 const MARGIN = 0.6;
-const LEFT_EXTENT = 1; // outerR, measured left of the C centre
-const RIGHT_EXTENT = DOT_DISTANCE_RATIO + DOT_RATIO; // outerR, measured right of it
-const FIT_SPAN_RATIO = LEFT_EXTENT + RIGHT_EXTENT; // 2.142
-/** Vertical fit only: the C is exactly 2 outerR tall. */
-const OUTER_R = VIEW / 2 - MARGIN;
+const LEFT_EXTENT_RATIO = 1;
+const ARC_RIGHT_EXTENT_RATIO = Math.cos((GAP_HALF_DEG * Math.PI) / 180) + STROKE_RATIO / 2;
+const DOT_RIGHT_EXTENT_RATIO = DOT_DISTANCE_RATIO + DOT_RATIO;
+const RIGHT_EXTENT_RATIO = Math.max(ARC_RIGHT_EXTENT_RATIO, DOT_RIGHT_EXTENT_RATIO);
+const FIT_SPAN_RATIO = LEFT_EXTENT_RATIO + RIGHT_EXTENT_RATIO;
+/**
+ * The C is exactly 2 outerR tall and the mark is FIT_SPAN_RATIO wide, so the
+ * outerR that fits both dimensions with MARGIN on every side is the smaller of
+ * the two allowances.
+ */
+const OUTER_R = Math.min(
+  (VIEW - 2 * MARGIN) / 2, // vertical
+  (VIEW - 2 * MARGIN) / FIT_SPAN_RATIO, // horizontal
+);
 const STROKE = OUTER_R * STROKE_RATIO;
 const INNER_R = OUTER_R - STROKE;
 /** Rounded to 3 decimals so every emitted attribute is legible and stable. */
@@ -97,10 +137,25 @@ const DOT_R = round(OUTER_R * DOT_RATIO);
 /** Absolute dot-centre offset from the C centre (what the SVG needs). */
 const DOT_DISTANCE = round(OUTER_R * DOT_DISTANCE_RATIO);
 
-/** Centre the drawn span horizontally; the C is vertically centred by definition. */
-const DRAWN_WIDTH = OUTER_R * FIT_SPAN_RATIO;
-const CENTRE_X = (VIEW - DRAWN_WIDTH) / 2 + OUTER_R;
+/**
+ * The C's centre. Its left edge is exactly MARGIN from the left, and because
+ * OUTER_R already accounts for the wider right-hand extent, the mark's right
+ * edge lands on MARGIN from the right too. The C is vertically centred by
+ * definition (it is the tallest element).
+ */
+const CENTRE_X = MARGIN + OUTER_R;
 const CENTRE_Y = VIEW / 2;
+
+/**
+ * Drawn bounds in master units, derived from the ratios rather than assumed from
+ * the nominal radius — the dot's edge reaches past the C's outer edge, and the
+ * C's stroked arc reaches past its own nominal endpoint. The guard below and the
+ * icon transform both consume these, so neither can under-measure the mark.
+ */
+const MARK_LEFT = CENTRE_X - OUTER_R;
+const MARK_RIGHT = CENTRE_X + OUTER_R * RIGHT_EXTENT_RATIO;
+const MARK_TOP = CENTRE_Y - OUTER_R;
+const MARK_BOTTOM = CENTRE_Y + OUTER_R;
 
 const DOT_CX = round(CENTRE_X + DOT_DISTANCE);
 const DOT_CY = CENTRE_Y;
@@ -115,17 +170,50 @@ function polar(radius, deg) {
   };
 }
 
-const openUpper = polar(OUTER_R, GAP_HALF_DEG);
-const openLower = polar(OUTER_R, -GAP_HALF_DEG);
-const innerUpper = polar(INNER_R, GAP_HALF_DEG);
-const innerLower = polar(INNER_R, -GAP_HALF_DEG);
+/**
+ * Arc endpoints for the C's body.
+ *
+ * SVG's arc command has two traps, and both of them bit this file:
+ *
+ *  1. A single command cannot draw more than 180 degrees. Asking for the whole
+ *     280 deg body in one `A` makes the renderer draw the 80 deg COMPLEMENT
+ *     instead, silently turning the C into two stubby stroke ends.
+ *  2. `sweep-flag` cannot simply be reasoned about from the math: it is the
+ *     direction of the (sweep *and* large-arc) chosen arc, in screen space. In
+ *     this viewBox (y down, angles counter-clockwise from +x) a command costs
+ *     -sweep * span, so sweep=0 spans FORWARD.
+ *
+ * Therefore: split the body into ARC_SEGMENTS equal pieces of <=180 deg each and
+ * use sweep=0 with large-arc-flag=0, which unambiguously draws that forward span.
+ * Measured on the committed master with probe-path.mjs.
+ */
+const bodyStartDeg = GAP_HALF_DEG; // 40, the upper mouth corner
+const ARC_SEGMENTS = 2;
+const bodySpanDeg = 360 - GAP_HALF_DEG * 2; // 280
+const segmentDeg = bodySpanDeg / ARC_SEGMENTS; // 140 <= 180
 
-/** Open C as one filled path: outer arc, then back along the inner arc. */
+/** Points along the C's body at a fraction of the body arc. */
+const bodyPoint = (radius, fraction) =>
+  polar(radius, bodyStartDeg + segmentDeg * fraction);
+
+const outerPts = Array.from({ length: ARC_SEGMENTS + 1 }, (_, i) => bodyPoint(OUTER_R, i));
+const innerPts = Array.from({ length: ARC_SEGMENTS + 1 }, (_, i) => bodyPoint(INNER_R, i));
+
+/**
+ * Open C as one filled path.
+ *
+ * Outer boundary forwards (40 -> 320 deg), then the inner boundary backwards, so
+ * the two boundaries wind oppositely and the nonzero fill leaves the C's body
+ * filled and its cavity empty.
+ */
 const C_PATH = [
-  `M ${openUpper.x} ${openUpper.y}`,
-  `A ${round(OUTER_R)} ${round(OUTER_R)} 0 1 1 ${openLower.x} ${openLower.y}`,
-  `L ${innerLower.x} ${innerLower.y}`,
-  `A ${round(INNER_R)} ${round(INNER_R)} 0 1 0 ${innerUpper.x} ${innerUpper.y}`,
+  `M ${outerPts[0].x} ${outerPts[0].y}`,
+  ...outerPts.slice(1).map((p) => `A ${round(OUTER_R)} ${round(OUTER_R)} 0 0 0 ${p.x} ${p.y}`),
+  `L ${innerPts[innerPts.length - 1].x} ${innerPts[innerPts.length - 1].y}`,
+  ...innerPts
+    .slice(0, -1)
+    .reverse()
+    .map((p) => `A ${round(INNER_R)} ${round(INNER_R)} 0 0 1 ${p.x} ${p.y}`),
   "Z",
 ].join(" ");
 
@@ -158,13 +246,14 @@ const GEOMETRY_REPORT = {
 };
 
 // --------------------------------------------------------------- SVGs ------
-function markSvg({ ink, tile = null, size = VIEW }) {
-  const tileRect =
-    tile === null
-      ? ""
-      : `  <rect x="0" y="0" width="${VIEW}" height="${VIEW}" rx="${round(VIEW * (7 / 32))}" fill="${tile}"/>\n`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW} ${VIEW}" width="${size}" height="${size}" role="img" aria-hidden="true" focusable="false">
-${tileRect}  <path d="${C_PATH}" fill="${ink}"/>
+/**
+ * Mark on a transparent background. There is deliberately NO tile, box or
+ * container: the approved logo is the C plus the dot and nothing else, so it can
+ * float directly on whatever surface it is placed on.
+ */
+function markSvg({ ink }) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEW} ${VIEW}" width="${VIEW}" height="${VIEW}" role="img" aria-hidden="true" focusable="false">
+  <path d="${C_PATH}" fill="${ink}"/>
   <circle cx="${round(DOT_CX)}" cy="${round(DOT_CY)}" r="${DOT_R}" fill="${CUE_BLUE}"/>
 </svg>
 `;
@@ -178,10 +267,10 @@ ${tileRect}  <path d="${C_PATH}" fill="${ink}"/>
 function wordmarkSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 232 48" width="232" height="48" role="img" aria-label="CueParcel">
   <g transform="translate(1 6) scale(1.125)">
-    <path d="${C_PATH}" fill="${INK}"/>
+    <path d="${C_PATH}" fill="${WORDMARK_INK}"/>
     <circle cx="${round(DOT_CX)}" cy="${round(DOT_CY)}" r="${DOT_R}" fill="${CUE_BLUE}"/>
   </g>
-  <text x="55" y="32" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" letter-spacing="-0.4" fill="${INK}">CueParcel</text>
+  <text x="55" y="32" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" letter-spacing="-0.4" fill="${WORDMARK_INK}">CueParcel</text>
 </svg>
 `;
 }
@@ -194,29 +283,36 @@ const FILES = {
 
 // --------------------------------------------------------------- PNGs ------
 /**
- * Icon tile: a rounded square with the mark inset, so contrast stays predictable
- * on both light and dark browser chrome.
+ * Extension icons: TRANSPARENT, no tile.
  *
- * The inset is sized so the DOT still has breathing room: the mark's right edge
- * is the dot's edge, so without enough padding the cue dot would be cropped.
- * The drawn width is FIT_SPAN_RATIO outerR = 30 units of the 32-unit viewBox, so
- * the icon pads a further 1 viewBox unit on each side.
+ * A transparent icon cannot rely on a background for contrast, so the C uses the
+ * restrained cool-slate that stays visible on both light and dark browser chrome
+ * (the approved near-black would sit at 1.12:1 on dark chrome). The dot keeps the
+ * approved vivid blue.
+ *
+ * Both the C and the dot must clear the canvas edge: at 16px a single clipped
+ * pixel is a visibly flat side on the glyph.
  */
-const ICON_RADIUS_RATIO = 7 / 32;
-const ICON_PADDING_UNITS = 1;
 
 function iconHtml(size) {
-  const inset = round((size * ICON_PADDING_UNITS) / VIEW);
-  const inner = size - inset * 2;
-  const scale = round(inner / VIEW);
+  // Map the master's own [MARK_LEFT, MARK_RIGHT] x [MARK_TOP, MARK_BOTTOM] bounds
+  // onto the icon with MARGIN units of padding on every side, so no element is
+  // ever clipped and the mark stays optically centred. A uniform scale is used
+  // (matching preserveAspectRatio "meet"), so the padding stays symmetric.
+  const uniform = Math.min(
+    (VIEW - 2 * MARGIN) / (MARK_RIGHT - MARK_LEFT),
+    (VIEW - 2 * MARGIN) / (MARK_BOTTOM - MARK_TOP),
+  );
+  const scale = round((size * uniform) / VIEW);
+  const insetX = round((size * (MARGIN - MARK_LEFT * uniform)) / VIEW);
+  const insetY = round((size * (MARGIN - MARK_TOP * uniform)) / VIEW);
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     html,body{margin:0;padding:0;width:${size}px;height:${size}px;background:transparent;overflow:hidden}
     svg{display:block;image-rendering:auto}
   </style></head><body>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect x="0" y="0" width="${size}" height="${size}" rx="${round(size * ICON_RADIUS_RATIO)}" fill="${TILE}"/>
-  <g transform="translate(${inset} ${inset}) scale(${scale})">
-    <path d="${C_PATH}" fill="${MARK_LIGHT}"/>
+  <g transform="translate(${insetX} ${insetY}) scale(${scale})">
+    <path d="${C_PATH}" fill="${MARK_TOOLBAR}"/>
     <circle cx="${round(DOT_CX)}" cy="${round(DOT_CY)}" r="${DOT_R}" fill="${CUE_BLUE}"/>
   </g>
 </svg>
@@ -235,7 +331,8 @@ async function renderIcons() {
       });
       await page.setContent(iconHtml(size), { waitUntil: "load" });
       const buffer = await page.screenshot({
-        omitBackground: false,
+        // Transparent: the approved icon has no tile, box or container.
+        omitBackground: true,
         clip: { x: 0, y: 0, width: size, height: size },
       });
       await page.close();
@@ -248,13 +345,9 @@ async function renderIcons() {
 }
 
 // --------------------------------------------------------------- main ------
-await mkdir(BRAND_DIR, { recursive: true });
-await mkdir(ICON_DIR, { recursive: true });
-
-for (const [name, contents] of Object.entries(FILES)) {
-  await writeFile(join(BRAND_DIR, name), contents, "utf8");
-  console.log(`  wrote public/brand/${name}`);
-}
+// Everything above is pure: it computes the geometry and builds strings. All
+// file writing and rasterising happens here, so `--dump-html` and any future
+// inspection can reuse the exact geometry without touching committed files.
 
 // Fail loudly if the geometry drifts out of the approved envelope.
 //
@@ -289,14 +382,70 @@ if (dotPercent < 28 || dotPercent > 32) {
 if (GAP_HALF_DEG * 2 < 76 || GAP_HALF_DEG * 2 > 84) {
   problems.push(`opening is ${GAP_HALF_DEG * 2} deg, approved is ~80 deg`);
 }
+/**
+ * Arc-feasibility guard. The body must be split into pieces of at most 180 deg,
+ * or the renderer draws the complement and the C degrades into two stub ends
+ * (see the C_PATH comment). Asserting the split rather than the outcome means a
+ * future edit to GAP_HALF_DEG fails here instead of shipping a broken mark.
+ */
+const bodyDeg = 360 - GAP_HALF_DEG * 2;
+const maxSegmentDeg = 180;
+const piecesNeeded = Math.ceil(bodyDeg / maxSegmentDeg);
+if (ARC_SEGMENTS < piecesNeeded) {
+  problems.push(
+    `C body is ${bodyDeg} deg but is split into ${ARC_SEGMENTS} arc command(s); at most ${maxSegmentDeg} deg each means ${piecesNeeded} are required`,
+  );
+}
+if (segmentDeg > maxSegmentDeg) {
+  problems.push(`an arc command spans ${round(segmentDeg)} deg, the SVG limit is ${maxSegmentDeg}`);
+}
+const arcCount = C_PATH.split("A ").length - 1;
+if (arcCount !== ARC_SEGMENTS * 2) {
+  problems.push(`expected ${ARC_SEGMENTS * 2} arc commands in the path, found ${arcCount}`);
+}
+/**
+ * Fit guard. The whole drawn mark must sit inside the viewBox with margin. The
+ * horizontal bounds come from whichever of the C's stroked arc or the dot reaches
+ * further right; assuming the dot is always outside the C is what previously
+ * pushed the mark past the right edge and clipped it.
+ */
+const eps = 1e-9;
+const fitsLeft = MARK_LEFT > 0 + eps;
+const fitsRight = MARK_RIGHT < VIEW - eps;
+const fitsTop = MARK_TOP > 0 + eps;
+const fitsBottom = MARK_BOTTOM < VIEW - eps;
+if (!fitsLeft || !fitsRight || !fitsTop || !fitsBottom) {
+  problems.push(
+    `mark does not fit the viewBox: x ${round(MARK_LEFT)}..${round(MARK_RIGHT)}, y ${round(MARK_TOP)}..${round(MARK_BOTTOM)} of ${VIEW}`,
+  );
+}
 if (problems.length > 0) {
   console.error("\nBrand geometry violation:");
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
 
-console.log("\nGeometry (measured from the approved brand board):");
-console.log(JSON.stringify(GEOMETRY_REPORT, null, 2));
-console.log("\nRasterising icons with Playwright's bundled Chromium...");
-await renderIcons();
-console.log("\nBrand assets generated.");
+const [flag, flagArg] = process.argv.slice(2);
+
+if (flag === "--dump-html") {
+  const size = Number(flagArg);
+  if (!ICON_SIZES.includes(size)) {
+    console.error(`--dump-html needs one of: ${ICON_SIZES.join(", ")}`);
+    process.exit(1);
+  }
+  console.log(iconHtml(size));
+} else {
+  await mkdir(BRAND_DIR, { recursive: true });
+  await mkdir(ICON_DIR, { recursive: true });
+
+  for (const [name, contents] of Object.entries(FILES)) {
+    await writeFile(join(BRAND_DIR, name), contents, "utf8");
+    console.log(`  wrote public/brand/${name}`);
+  }
+
+  console.log("\nGeometry (measured from the approved brand board):");
+  console.log(JSON.stringify(GEOMETRY_REPORT, null, 2));
+  console.log("\nRasterising icons with Playwright's bundled Chromium...");
+  await renderIcons();
+  console.log("\nBrand assets generated.");
+}

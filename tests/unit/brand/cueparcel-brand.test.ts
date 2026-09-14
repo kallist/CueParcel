@@ -13,6 +13,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { BRAND_TAGLINE, ONBOARDING_STEPS, PIN_HINT_TEXT } from "../../../src/extension/sidepanel/onboarding";
 import { serializeAgentContext } from "../../../src/application/workbench/delivery";
@@ -130,6 +131,161 @@ function pngSize(buffer: Buffer): { width: number; height: number } {
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
 }
 
+/**
+ * Minimal RGBA PNG reader (no dependency): the brand tests must assert the actual
+ * committed PIXELS, because "transparent, no tile" is a claim about paint and a
+ * markup assertion cannot see it.
+ *
+ * Supports colour type 6 (RGBA) with the full five filter types, which is what
+ * every committed icon uses.
+ */
+function decodePng(buffer: Buffer): {
+  width: number;
+  height: number;
+  colorType: number;
+  alphaAt(x: number, y: number): number;
+  at(x: number, y: number): { r: number; g: number; b: number };
+} {
+  let pos = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = 0;
+  const idat: Buffer[] = [];
+  while (pos < buffer.length) {
+    const length = buffer.readUInt32BE(pos);
+    const type = buffer.toString("ascii", pos + 4, pos + 8);
+    const data = buffer.subarray(pos + 8, pos + 8 + length);
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      colorType = data[9];
+    } else if (type === "IDAT") idat.push(data);
+    else if (type === "IEND") break;
+    pos += 12 + length;
+  }
+  const channels = colorType === 6 ? 4 : 3;
+  const raw = inflateSync(Buffer.concat(idat));
+  const stride = width * channels;
+  const out = Buffer.alloc(height * stride);
+  let rp = 0;
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[rp];
+    rp += 1;
+    const line = raw.subarray(rp, rp + stride);
+    rp += stride;
+    const cur = out.subarray(y * stride, (y + 1) * stride);
+    const prev = y > 0 ? out.subarray((y - 1) * stride, y * stride) : Buffer.alloc(stride);
+    for (let x = 0; x < stride; x += 1) {
+      const a = x >= channels ? cur[x - channels] : 0;
+      const b = prev[x];
+      const c = x >= channels ? prev[x - channels] : 0;
+      let v = line[x];
+      if (filter === 1) v = (v + a) & 0xff;
+      else if (filter === 2) v = (v + b) & 0xff;
+      else if (filter === 3) v = (v + ((a + b) >> 1)) & 0xff;
+      else if (filter === 4) {
+        const p = a + b - c;
+        const pa = Math.abs(p - a);
+        const pb = Math.abs(p - b);
+        const pc = Math.abs(p - c);
+        v = (v + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 0xff;
+      }
+      cur[x] = v;
+    }
+  }
+  return {
+    width,
+    height,
+    colorType,
+    alphaAt: (x, y) => out[(y * width + x) * channels + (channels === 4 ? 3 : 0)],
+    at: (x, y) => {
+      const o = (y * width + x) * channels;
+      return { r: out[o], g: out[o + 1], b: out[o + 2] };
+    },
+  };
+}
+
+/** Every arc radius in a master's path, in declaration order. */
+function arcRadiiOf(svg: string): number[] {
+  const d = svg.match(/d="(M [^"]+)"/)?.[1] ?? "";
+  return [...d.matchAll(/A ([\d.]+) ([\d.]+) 0 0 [01]/g)].map((m) => Number(m[1]));
+}
+
+/**
+ * The C's real drawn geometry, derived from the path and the known fit rule.
+ *
+ * Two of the C's extremes are NOT path endpoints, so nothing here may assume
+ * "the extremes are in the path":
+ *  - the arc passes through the outer circle's rightmost point (centreX + outerR)
+ *    between its endpoints, and
+ *  - the path's highest and lowest points ARE the mouth corners, which sit at
+ *    outerR*sin(40 deg), not at the full radius.
+ *
+ * The fit rule is that the outer circle's left edge lands exactly MARGIN from the
+ * viewBox edge (asserted as `left` below), which is what pins the centre.
+ */
+const MASTER_MARGIN = 0.6;
+
+function pathPoints(svg: string): { x: number; y: number }[] {
+  const d = svg.match(/d="(M [^"]+)"/)?.[1] ?? "";
+  /**
+   * Parse (x, y) pairs command by command. A generic "every pair of numbers" scan
+   * is wrong here: an `A` command is `rx ry rot large sweep x y`, so its radius
+   * pair has to be skipped explicitly or the coordinates shift out of phase.
+   */
+  const points: { x: number; y: number }[] = [];
+  for (const command of d.split(/(?=[A-Z])/)) {
+    const numbers = (command.slice(1).match(/-?[\d.]+/g) ?? []).map(Number);
+    const isArc = command.trim().startsWith("A");
+    const x = isArc ? numbers[numbers.length - 2] : numbers[0];
+    const y = isArc ? numbers[numbers.length - 1] : numbers[1];
+    if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+  }
+  return points;
+}
+
+function cGeometryOf(svg: string): {
+  view: number;
+  outerR: number;
+  innerR: number;
+  centreX: number;
+  centreY: number;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+} {
+  const view = Number(svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/)?.[1]);
+  const radii = arcRadiiOf(svg);
+  const outerR = Math.max(...radii);
+  const innerR = Math.min(...radii);
+  const points = pathPoints(svg);
+  const rawLeft = Math.min(...points.map((p) => p.x));
+  const ys = points.map((p) => p.y);
+  const centreY = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const centreX = rawLeft + outerR;
+  const circle = svg.match(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/);
+  const dot = circle === null ? null : { cx: Number(circle[1]), cy: Number(circle[2]), r: Number(circle[3]) };
+  /**
+   * `right` is the widest DRAWN element. The dot's edge reaches past the C's outer
+   * edge, so it is the dot that defines the right margin, not the C — the exact
+   * distinction the V2 fit bug got wrong.
+   */
+  const cRight = centreX + outerR;
+  const dotRight = dot === null ? -Infinity : dot.cx + dot.r;
+  return {
+    view,
+    outerR,
+    innerR,
+    centreX,
+    centreY,
+    left: centreX - outerR,
+    right: Math.max(cRight, dotRight),
+    top: Math.min(centreY - outerR, dot === null ? Infinity : dot.cy - dot.r),
+    bottom: Math.max(centreY + outerR, dot === null ? -Infinity : dot.cy + dot.r),
+  };
+}
+
 describe("B. committed icon assets", () => {
   it("ships a real PNG at every declared size, with exact dimensions", () => {
     for (const size of ICON_SIZES) {
@@ -148,6 +304,17 @@ describe("B. committed icon assets", () => {
     }
   });
 
+  /**
+   * The logo-fidelity hotfix locked a three-colour palette, each sampled from the
+   * approved brand board, and ZERO background tile. The tile is asserted against
+   * the PNG pixels in the test below, because "no tile" is a claim about paint,
+   * not about markup.
+   */
+  const CUE_BLUE = "#224AE6";
+  const MARK_LIGHT = "#141720";
+  const MARK_DARK = "#F2F3F5";
+  const MARK_TOOLBAR = "#66779A";
+
   it("keeps the vector masters and the wordmark", () => {
     for (const name of ["cueparcel-mark.svg", "cueparcel-mark-dark.svg", "cueparcel-wordmark.svg"]) {
       const file = join(rootDir, "public", "brand", name);
@@ -157,19 +324,28 @@ describe("B. committed icon assets", () => {
       // Brand rules: no gradient dependency, no filters/shadows, no AI cliché.
       expect(svg).not.toMatch(/gradient/i);
       expect(svg).not.toMatch(/<filter|drop-shadow|blur\(/i);
-      expect(svg).not.toMatch(/sparkle|robot|brain|wand/i);
+      expect(svg).not.toMatch(/sparkle|robot|brain|wand|✦/i);
       // The single accent must be exactly the brand blue.
-      expect(svg).toContain("#3157FF");
+      expect(svg).toContain(CUE_BLUE);
+      // No background tile: a rect (or any full-bleed shape) would be one.
+      expect(svg).not.toMatch(/<rect/i);
     }
   });
 
   it("uses the approved palette and nothing else as an accent", () => {
     const mark = readFileSync(join(rootDir, "public", "brand", "cueparcel-mark.svg"), "utf8");
-    expect(mark).toContain("#111318");
-    expect(mark).toContain("#3157FF");
+    expect(mark).toContain(MARK_LIGHT);
+    expect(mark).toContain(CUE_BLUE);
     const dark = readFileSync(join(rootDir, "public", "brand", "cueparcel-mark-dark.svg"), "utf8");
-    expect(dark).toContain("#3157FF");
-    expect(dark).not.toContain("#111318"); // the dark master uses a light C
+    expect(dark).toContain(CUE_BLUE);
+    // The dark master uses the light C: the approved ink would be invisible there.
+    expect(dark).toContain(MARK_DARK);
+    expect(dark).not.toContain(MARK_LIGHT);
+    // Exactly one accent colour is allowed: the blue, used by the dot alone.
+    for (const svg of [mark, dark]) {
+      const fills = [...svg.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1].toUpperCase());
+      expect([...new Set(fills)].sort()).toEqual([CUE_BLUE, svg === mark ? MARK_LIGHT : MARK_DARK].sort());
+    }
   });
 
   it("keeps the header mark geometry identical to the committed master", () => {
@@ -188,12 +364,23 @@ describe("B. committed icon assets", () => {
     expect(masterPath).not.toBeNull();
     expect(app).toContain(masterPath as string);
 
+    /**
+     * The C must be drawn as more than one arc command in BOTH places. A single
+     * SVG arc cannot exceed 180 degrees, so a one-command C silently renders the
+     * 80 degree complement (two stub ends) while the `d` string still looks
+     * plausible. Pinning the count catches that class of regression in the header
+     * and in the exported master at once.
+     */
+    const arcCount = (text: string) => (text.match(/A [\d.]+ [\d.]+ 0 0 [01] [\d.]+ [\d.]+/g) ?? []).length;
+    expect(arcCount(master)).toBeGreaterThanOrEqual(2);
+    expect(arcCount(app)).toBe(arcCount(master));
+
     const circle = circleOf(master);
     expect(circle).not.toBeNull();
     expect(app).toContain(`cx="${circle?.cx}"`);
     expect(app).toContain(`cy="${circle?.cy}"`);
     expect(app).toContain(`r="${circle?.r}"`);
-    expect(app).toContain('fill="#3157FF"');
+    expect(app).toContain(`fill="${CUE_BLUE}"`);
   });
 
   /**
@@ -206,17 +393,14 @@ describe("B. committed icon assets", () => {
    */
   it("keeps the cue dot at the measured approved proportions", () => {
     const master = readFileSync(join(rootDir, "public", "brand", "cueparcel-mark.svg"), "utf8");
-    const path = master.match(/d="M ([\d.]+) ([\d.]+) A ([\d.]+)/);
     const circle = master.match(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/);
-    expect(path).not.toBeNull();
     expect(circle).not.toBeNull();
-
-    const outerR = Number(path?.[3]);
+    const geometry = cGeometryOf(master);
     const dotR = Number(circle?.[3]);
     const dotCx = Number(circle?.[1]);
-    const cCx = Number(path?.[1]) - outerR * Math.cos((40 * Math.PI) / 180);
+    const r = geometry.outerR;
 
-    const dotShareOfHeight = dotR / outerR;
+    const dotShareOfHeight = dotR / r;
     expect(dotShareOfHeight).toBeGreaterThanOrEqual(0.28);
     expect(dotShareOfHeight).toBeLessThanOrEqual(0.32);
 
@@ -224,24 +408,166 @@ describe("B. committed icon assets", () => {
     expect(dotR).toBeGreaterThan(4);
 
     // Distance to the right of the C centre, in units of the C's outer radius.
-    const dotDistanceRatio = (dotCx - cCx) / outerR;
-    expect(dotDistanceRatio).toBeGreaterThan(0.74);
-    expect(dotDistanceRatio).toBeLessThan(0.80);
+    const dotDistanceRatio = (dotCx - geometry.centreX) / r;
+    expect(dotDistanceRatio).toBeCloseTo(0.7712, 2);
 
     // And it must reach past the C's outer edge (approved overhang ~1.1 units).
-    expect(dotCx + dotR).toBeGreaterThan(cCx + outerR);
+    const cRight = geometry.centreX + r;
+    expect(dotCx + dotR).toBeGreaterThan(cRight);
+    expect(dotCx + dotR - cRight).toBeGreaterThan(0.5);
   });
 
   it("keeps the C's stroke at the measured light weight", () => {
     const master = readFileSync(join(rootDir, "public", "brand", "cueparcel-mark.svg"), "utf8");
-    const path = master.match(/A ([\d.]+) [\d.]+ 0 1 1 [\d.]+ [\d.]+ L [\d.]+ [\d.]+ A ([\d.]+)/);
-    expect(path).not.toBeNull();
-    const outerR = Number(path?.[1]);
-    const innerR = Number(path?.[2]);
+    const radii = arcRadiiOf(master);
+    // Outer body arcs and the inner cavity-return arcs share the path, so the
+    // stroke is the gap between the largest and smallest arc radius.
+    expect(radii.length).toBeGreaterThanOrEqual(2);
+    const outerR = Math.max(...radii);
+    const innerR = Math.min(...radii);
     const strokeOverHeight = (outerR - innerR) / (outerR * 2);
     // Approved is 11.6%; the first pass was 18.7% (far too heavy).
     expect(strokeOverHeight).toBeGreaterThan(0.10);
     expect(strokeOverHeight).toBeLessThan(0.135);
+  });
+
+  /**
+   * The lockup must FIT its own viewBox. The V2 hotfix shipped a mark that ran off
+   * the right edge (the dot's edge lands past the C's), which at 128px clipped the
+   * artwork. These assertions are ratio-based so they survive a viewBox change.
+   */
+  it("fits the whole lockup inside the 32-unit viewBox with margin", () => {
+    const master = readFileSync(join(rootDir, "public", "brand", "cueparcel-mark.svg"), "utf8");
+    const g = cGeometryOf(master);
+    expect(Number.isFinite(g.view)).toBe(true);
+
+    // The whole drawn lockup, C and dot, must sit inside the canvas.
+    expect(g.left).toBeGreaterThan(0);
+    expect(g.top).toBeGreaterThan(0);
+    expect(g.right).toBeLessThan(g.view);
+    expect(g.bottom).toBeLessThan(g.view);
+
+    // The C's own left edge sits on the margin, and the widest drawn element —
+    // the dot, whose edge reaches 1.06 past the C — sets the right margin. Both
+    // must match the fit rule exactly; getting this wrong is what pushed the mark
+    // past the right edge in V2.
+    expect(g.left).toBeCloseTo(MASTER_MARGIN, 2);
+    expect(g.right).toBeCloseTo(g.view - MASTER_MARGIN, 2);
+    // The C alone leaves extra room on the right, which is what the dot fills.
+    expect(g.right - g.centreX).toBeGreaterThan(g.outerR);
+
+    // The C is the tallest element, so the vertical fit is the C's own diameter,
+    // centred on the viewBox. The horizontal margin is smaller because the lockup
+    // is WIDER than the C alone (the dot's overhang sets the right edge).
+    expect(g.centreY - g.outerR).toBeGreaterThan(0);
+    expect(g.centreY + g.outerR).toBeLessThan(g.view);
+    expect(g.centreY).toBeCloseTo(g.view / 2, 2);
+    // Vertical margins are equal on both sides.
+    expect(g.centreY - g.outerR).toBeCloseTo(g.view - (g.centreY + g.outerR), 2);
+  });
+
+  /**
+   * The extension icons are the mark on TRANSPARENT pixels: no tile, card, chip or
+   * shadow. The V1 pass shipped an opaque rounded-square tile, which is the exact
+   * thing the approved mark does not have. This reads the real PNG bytes.
+   */
+  it("ships transparent extension icons with no background tile", () => {
+    for (const size of ICON_SIZES) {
+      const png = decodePng(readFileSync(join(rootDir, "public", "icons", `icon${size}.png`)));
+      expect(png.width).toBe(size);
+      expect(png.height).toBe(size);
+      // 6 = RGBA. A tile would require full opacity here.
+      expect(png.colorType, `icon${size} is not RGBA`).toBe(6);
+
+      let opaque = 0;
+      let transparent = 0;
+      for (let y = 0; y < size; y += 1) {
+        for (let x = 0; x < size; x += 1) {
+          const a = png.alphaAt(x, y);
+          if (a === 255) opaque += 1;
+          else if (a === 0) transparent += 1;
+        }
+      }
+      // Corners are the tell-tale: a tile or card fills them.
+      for (const [x, y] of [[0, 0], [size - 1, 0], [0, size - 1], [size - 1, size - 1]]) {
+        expect(png.alphaAt(x, y), `icon${size} corner (${x},${y}) is opaque`).toBe(0);
+      }
+      // The mark covers a minority of the canvas; a tile would cover nearly all.
+      expect(opaque / (size * size), `icon${size} is mostly opaque`).toBeLessThan(0.5);
+      expect(transparent / (size * size), `icon${size} has no transparent area`).toBeGreaterThan(0.5);
+    }
+  });
+
+  it("draws the icon's C in the contrast-adapted slate and the dot in the brand blue", () => {
+    const png = decodePng(readFileSync(join(rootDir, "public", "icons", "icon128.png")));
+    const toRgb = (hex: string) => ({
+      r: parseInt(hex.slice(1, 3), 16),
+      g: parseInt(hex.slice(3, 5), 16),
+      b: parseInt(hex.slice(5, 7), 16),
+    });
+    const palette = { [MARK_TOOLBAR]: toRgb(MARK_TOOLBAR), [CUE_BLUE]: toRgb(CUE_BLUE) };
+    /**
+     * Classify by NEAREST palette colour, not by an exact hex match. An opaque
+     * pixel on the boundary between the C's arc and the dot is exactly what an
+     * exact-match assertion rejects, and at 128px those blend pixels are real
+     * paint, not antialiasing noise.
+     */
+    const nearest = (x: number, y: number) => {
+      const p = png.at(x, y);
+      let best: string | null = null;
+      let bestDistance = Infinity;
+      for (const [name, t] of Object.entries(palette)) {
+        const distance = Math.hypot(p.r - t.r, p.g - t.g, p.b - t.b);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = name;
+        }
+      }
+      return { name: best, distance: bestDistance };
+    };
+
+    let slate = 0;
+    let blue = 0;
+    const unexplained: string[] = [];
+    for (let y = 0; y < 128; y += 1) {
+      for (let x = 0; x < 128; x += 1) {
+        /**
+         * Ignore imperceptible fringe pixels. Chromium's rasteriser leaves a few
+         * hundred pixels at alpha 1-5 with premultiplied colours on the shape
+         * edges (measured: 28 of them on icon128 at alpha 1-5). They are
+         * invisible on every background and carry no brand colour information,
+         * so only pixels the eye can actually see are classified.
+         */
+        if (png.alphaAt(x, y) < 16) continue;
+        const { name, distance } = nearest(x, y);
+        // A visible pixel must be one of the two brand colours, or a blend
+        // between them. Those two colours are 66 apart, so 40 is the natural
+        // midpoint of the palette gap and admits nothing else.
+        if (distance > 40) {
+          const p = png.at(x, y);
+          unexplained.push(`(${x},${y}) rgba(${p.r},${p.g},${p.b},${png.alphaAt(x, y)})`);
+          continue;
+        }
+        if (name === MARK_TOOLBAR) slate += 1;
+        else blue += 1;
+      }
+    }
+    expect(slate, "no visible pixels in the contrast-adapted slate").toBeGreaterThan(1000);
+    expect(blue, "no visible pixels in the brand blue").toBeGreaterThan(200);
+    expect(unexplained, "visible pixels that are neither brand colour").toEqual([]);
+
+    /**
+     * The approved near-black C would sit at 1.12:1 on dark browser chrome, so the
+     * transparent icon must not use it anywhere — not even as a fringe.
+     */
+    const ink = toRgb(MARK_LIGHT);
+    for (let y = 0; y < 128; y += 1) {
+      for (let x = 0; x < 128; x += 1) {
+        if (png.alphaAt(x, y) === 0) continue;
+        const p = png.at(x, y);
+        expect(Math.hypot(p.r - ink.r, p.g - ink.g, p.b - ink.b)).toBeGreaterThan(40);
+      }
+    }
   });
 
   it("never commits a third-party font file", () => {
