@@ -135,6 +135,17 @@ export default tseslint.config(
   },
   {
     /**
+     * Scripts that drive a browser through Playwright evaluate real page code, so
+     * the callback passed to `page.evaluate()` legitimately uses browser globals
+     * even though the file itself runs in Node.
+     */
+    files: ["scripts/generate-social-preview.mjs"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
+  {
+    /**
      * The launch landing page is plain browser JavaScript with no build step and
      * no module system, so it is linted against browser globals and is allowed to
      * declare globals the way an inline script does.

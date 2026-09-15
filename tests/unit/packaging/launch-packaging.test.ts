@@ -446,7 +446,9 @@ describe("launch assets", () => {
     ["cueparcel-card-fix.png", 1200, 760],
     ["cueparcel-card-compare.png", 1200, 760],
     ["cueparcel-card-build.png", 1200, 760],
-    ["cueparcel-social-preview.png", 1200, 630],
+    // The social preview is 1280x640 per the social-card specification. It was
+    // briefly 1200x630; that was the wrong canvas and was corrected.
+    ["cueparcel-social-preview.png", 1280, 640],
   ] as const;
 
   it("ships every launch asset at the size the platform expects", () => {
@@ -460,13 +462,83 @@ describe("launch assets", () => {
     }
   });
 
-  it("keeps the social preview at a GitHub-compatible 1200x630", () => {
-    // 1200x630 is the size GitHub and most platforms crop from without distortion.
+  it("keeps the social preview on the 1280x640 card canvas", () => {
     const buffer = readFileSync(join(rootDir, "docs", "assets", "cueparcel-social-preview.png"));
-    expect(buffer.readUInt32BE(16)).toBe(1200);
-    expect(buffer.readUInt32BE(20)).toBe(630);
-    const ratio = 1200 / 630;
-    expect(Math.abs(ratio - 1.9047619)).toBeLessThan(0.001);
+    expect(buffer.readUInt32BE(16)).toBe(1280);
+    expect(buffer.readUInt32BE(20)).toBe(640);
+    // A 2:1 card. Emitting it at a scaled size (e.g. 2560x1280 from a 2x device
+    // pixel ratio) would break the specified canvas, so the ratio is pinned too.
+    expect(1280 / 640).toBe(2);
+  });
+
+  /**
+   * The card's composition is measured by the generator and published next to the
+   * asset. These tests consume those measurements, so they cannot drift from the
+   * artwork the way hard-coded coordinates would.
+   */
+  describe("social preview composition", () => {
+    const LAYOUT = join(rootDir, "docs", "assets", "cueparcel-social-preview.layout.json");
+    const layout = JSON.parse(readFileSync(LAYOUT, "utf8")) as {
+      canvas: { width: number; height: number };
+      safeMargin: number;
+      bands: { name: string; left: number; right: number; top: number; bottom: number; fontSize: number }[];
+      product: { left: number; right: number; top: number; bottom: number; width: number; height: number };
+      copyColumn: { left: number; right: number; top: number; bottom: number; width: number };
+    };
+
+    it("declares a canvas matching the shipped PNG", () => {
+      const buffer = readFileSync(join(rootDir, "docs", "assets", "cueparcel-social-preview.png"));
+      expect(layout.canvas.width).toBe(buffer.readUInt32BE(16));
+      expect(layout.canvas.height).toBe(buffer.readUInt32BE(20));
+    });
+
+    it("keeps the headline clear of the product view", () => {
+      // This was the reported defect: the screenshot visually cut the headline.
+      const headline = layout.bands.find((b) => b.name === "headline");
+      expect(headline, "no headline band recorded").toBeDefined();
+      const gap = layout.product.left - (headline?.right ?? 0);
+      expect(gap, `only ${gap.toFixed(1)}px between the headline and the product view`).toBeGreaterThanOrEqual(24);
+    });
+
+    it("keeps every element inside the safe margin", () => {
+      for (const [name, box] of [
+        ["copy column", layout.copyColumn],
+        ["product view", layout.product],
+      ] as const) {
+        expect(box.left, `${name} left`).toBeGreaterThanOrEqual(layout.safeMargin - 1);
+        expect(box.right, `${name} right`).toBeLessThanOrEqual(layout.canvas.width - layout.safeMargin + 1);
+        expect(box.top, `${name} top`).toBeGreaterThanOrEqual(layout.safeMargin - 1);
+        expect(box.bottom, `${name} bottom`).toBeLessThanOrEqual(layout.canvas.height - layout.safeMargin + 1);
+      }
+    });
+
+    it("keeps the product view subordinate to the message", () => {
+      const share = layout.product.width / layout.canvas.width;
+      expect(share, `the product view is ${(share * 100).toFixed(1)}% of the width`).toBeLessThanOrEqual(0.45);
+      // And the text zone must be the larger share.
+      const copyShare = layout.copyColumn.width / layout.canvas.width;
+      expect(copyShare, "the text zone must be the wider column").toBeGreaterThan(share);
+    });
+
+    it("uses text sizes that survive being displayed small", () => {
+      const sizeOf = (name: string) => layout.bands.find((b) => b.name === name)?.fontSize ?? 0;
+      // At 480px wide (a small social preview) the card is scaled to 37.5%.
+      const smallest = 480 / layout.canvas.width;
+      expect(sizeOf("headline") * smallest, "headline at 480px wide").toBeGreaterThanOrEqual(18);
+      expect(sizeOf("support") * smallest, "supporting line at 480px wide").toBeGreaterThanOrEqual(9);
+      // A bitmap/terminal headline would be drawn at a tiny pixel-font size; a real
+      // typographic headline is large. This catches a return to the old approach.
+      expect(sizeOf("headline"), "headline font size").toBeGreaterThanOrEqual(40);
+    });
+
+    it("records the real product capture it was composed from", () => {
+      const generator = read("scripts", "generate-social-preview.mjs");
+      expect(generator).toMatch(/panel-dark-cart-fix\.png/);
+      expect(generator).toMatch(/docs.*assets.*cueparcel-social-preview\.png/s);
+      // It must refuse rather than substitute placeholder art.
+      expect(generator).toMatch(/the real product capture is missing/);
+      expect(generator).toMatch(/exit\(1\)/);
+    });
   });
 
   it("keeps the demo GIF small enough to load in a README", () => {
