@@ -1,0 +1,63 @@
+name: Deploy landing page
+
+# Publishes the static landing page in site/ to GitHub Pages.
+#
+# WHY ACTIONS AND NOT BRANCH PUBLISHING
+# Branch-based Pages publishing can only serve the repository ROOT or /docs. The
+# landing page deliberately lives in site/, so the site directory is uploaded as a
+# Pages artifact instead. `path: ./site` below is therefore the deploy root: the
+# deployed site's index.html is site/index.html.
+#
+# This is the ONLY job that publishes the landing page. The ordinary CI workflow
+# never deploys anything, so a pull request can never publish to the public site.
+
+on:
+  push:
+    branches: [main]
+    # Only redeploy when something the site actually serves has changed, so
+    # unrelated commits do not churn the Pages deployment.
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# GITHUB_TOKEN permissions, least privilege for a Pages deployment:
+#   contents: read   check out the repository
+#   pages: write     create the Pages deployment
+#   id-token: write  required by deploy-pages to verify the deployment origin (OIDC)
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages allows one deployment at a time. Without this, two pushes in quick
+# succession can race and the older one can win. `cancel-in-progress: false` lets a
+# running deployment finish rather than leaving the site half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy the landing page
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      # Upload site/ as-is. There is no build step: the page is plain HTML, CSS,
+      # JS and images, and no framework, bundler or CDN is involved.
+      - name: Upload the site artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

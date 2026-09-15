@@ -879,6 +879,153 @@ describe("landing page", () => {
     expect(mb, `site/assets is ${mb.toFixed(2)}MB`).toBeLessThan(1.5);
   });
 
+  /**
+   * GitHub Pages deployment.
+   *
+   * CueParcel is a PROJECT site served at /CueParcel/, and branch-based Pages
+   * publishing can only serve the repository root or /docs — so the page in
+   * site/ must be uploaded as a Pages artifact by a workflow. These tests pin the
+   * properties that make that deployment work and keep working.
+   */
+  describe("GitHub Pages deployment", () => {
+    const WORKFLOW = join(rootDir, ".github", "workflows", "pages.yml");
+
+    it("ships a Pages workflow", () => {
+      expect(existsSync(WORKFLOW), "missing .github/workflows/pages.yml").toBe(true);
+    });
+
+    it("uploads site/ as the deploy root", () => {
+      const workflow = read(".github", "workflows", "pages.yml");
+      // The artifact path is what makes site/index.html the deployed index.html.
+      expect(workflow).toMatch(/uses:\s*actions\/upload-pages-artifact@v4/);
+      expect(workflow, "the Pages artifact path must be site/").toMatch(/path:\s*\.\/site\b/);
+      // A build step would contradict the site being plain static files.
+      expect(workflow).not.toMatch(/npm (ci|install|run build)/);
+    });
+
+    it("declares exactly the permissions a Pages deployment needs", () => {
+      const workflow = read(".github", "workflows", "pages.yml");
+      // Permission keys may contain hyphens (`id-token`), so the key pattern must
+      // not be \w+ — that silently dropped id-token and made this test lie.
+      const block = /permissions:\n((?:[ \t]+[A-Za-z-]+:[^\n]*\n)+)/.exec(workflow)?.[1] ?? "";
+      const granted = [...block.matchAll(/^[ \t]+([A-Za-z-]+):\s*(\w+)/gm)].map((m) => `${m[1]}:${m[2]}`).sort();
+      expect(granted).toEqual(["contents:read", "id-token:write", "pages:write"]);
+      // Least privilege: nothing broader than read on contents.
+      expect(block).not.toMatch(/contents:\s*write/);
+    });
+
+    it("uses the current official Pages actions and the github-pages environment", () => {
+      const workflow = read(".github", "workflows", "pages.yml");
+      for (const action of [
+        "actions/checkout@v6",
+        "actions/configure-pages@v5",
+        "actions/upload-pages-artifact@v4",
+        "actions/deploy-pages@v4",
+      ]) {
+        expect(workflow, `workflow does not use ${action}`).toContain(action);
+      }
+      expect(workflow).toMatch(/environment:\s*\n\s+name:\s*github-pages/);
+      expect(workflow).toMatch(/url:\s*\$\{\{\s*steps\.deployment\.outputs\.page_url\s*\}\}/);
+    });
+
+    it("serialises deployments so two pushes cannot race", () => {
+      const workflow = read(".github", "workflows", "pages.yml");
+      expect(workflow).toMatch(/concurrency:\s*\n\s+group:\s*pages/);
+      // A running deployment should finish rather than leave the site half-published.
+      expect(workflow).toMatch(/cancel-in-progress:\s*false/);
+    });
+
+    it("deploys only from main, and never as part of an ordinary PR run", () => {
+      const workflow = read(".github", "workflows", "pages.yml");
+      // Only a push to main (optionally via manual dispatch) may publish.
+      expect(workflow).toMatch(/push:\s*\n\s+branches:\s*\[main\]/);
+      expect(workflow).toMatch(/workflow_dispatch:/);
+      // A pull_request trigger would publish from a PR, which must never happen.
+      expect(workflow).not.toMatch(/^\s*pull_request:/m);
+      // And the ordinary CI workflow must not deploy anything.
+      const ci = read(".github", "workflows", "ci.yml");
+      expect(ci).not.toMatch(/deploy-pages|upload-pages-artifact/);
+    });
+
+    it("only redeploys when something the site serves changes", () => {
+      const workflow = read(".github", "workflows", "pages.yml");
+      expect(workflow).toMatch(/paths:\s*\n(?:\s+-\s.*\n)+/);
+      expect(workflow).toMatch(/"site\/\*\*"/);
+    });
+
+    it("keeps site/index.html at the top of the deploy root", () => {
+      expect(existsSync(join(SITE, "index.html")), "site/index.html must exist").toBe(true);
+      // A nested index would deploy as a subdirectory rather than the site root.
+      expect(existsSync(join(SITE, "public", "index.html"))).toBe(false);
+      // Site content must not be assumed to come from docs/, which branch
+      // publishing could serve but which is not the deploy root here.
+      expect(existsSync(join(rootDir, "docs", "index.html"))).toBe(false);
+    });
+
+    it("ships the .nojekyll marker so Jekyll cannot rewrite the site", () => {
+      const marker = join(SITE, ".nojekyll");
+      expect(existsSync(marker), "site/.nojekyll is missing").toBe(true);
+      // The convention is an EMPTY marker file; content in it is not expected.
+      expect(statSync(marker).size).toBe(0);
+    });
+  });
+
+  /**
+   * Project-subpath safety.
+   *
+   * The deployed site lives under /CueParcel/, so a root-absolute reference such as
+   * /assets/hero.png would resolve outside the project path and 404. A negative
+   * control confirmed that the subpath harness catches exactly that mistake, so
+   * these assertions are the cheap static equivalent that runs here.
+   */
+  describe("project-subpath safety", () => {
+    it("references every local asset relatively, never from the domain root", () => {
+      const html = read("site", "index.html");
+      const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]);
+      expect(refs.length).toBeGreaterThan(5);
+
+      const rootAbsolute = refs.filter((r) => r.startsWith("/") && !r.startsWith("//"));
+      expect(
+        rootAbsolute,
+        `root-absolute references would break under /CueParcel/: ${rootAbsolute.join(", ")}`,
+      ).toEqual([]);
+
+      const protocolRelative = refs.filter((r) => r.startsWith("//"));
+      expect(protocolRelative, `protocol-relative references: ${protocolRelative.join(", ")}`).toEqual([]);
+
+      // Every relative reference must resolve inside site/.
+      const local = refs.filter((r) => !/^(https?:|mailto:|#|data:|chrome:|edge:)/.test(r));
+      const missing = local.filter((r) => !existsSync(join(SITE, r.split("#")[0])));
+      expect(missing, `site references missing local files: ${missing.join(", ")}`).toEqual([]);
+    });
+
+    it("keeps styles.css free of root-absolute url() references", () => {
+      const css = read("site", "styles.css");
+      const urls = [...css.matchAll(/url\(\s*['"]?([^'")]+)/g)].map((m) => m[1]);
+      const rootAbsolute = urls.filter((u) => u.startsWith("/") && !u.startsWith("//"));
+      expect(rootAbsolute, `root-absolute CSS urls: ${rootAbsolute.join(", ")}`).toEqual([]);
+    });
+
+    it("does not hard-code a domain root in site/main.js", () => {
+      const js = read("site", "main.js");
+      // The demo's src is read from the DOM, so it follows the deploy path.
+      expect(js).toMatch(/gif\.getAttribute\(['"]src['"]\)/);
+      const absolutePaths = [...js.matchAll(/['"]\/(?!\/)[a-zA-Z][^'"]*['"]/g)].map((m) => m[0]);
+      expect(absolutePaths, `main.js hard-codes root paths: ${absolutePaths.join(", ")}`).toEqual([]);
+    });
+
+    it("keeps the intentional GitHub links absolute", () => {
+      const html = read("site", "index.html");
+      const github = [...html.matchAll(/href="(https:\/\/github\.com\/kallist\/CueParcel[^"]*)"/g)].map(
+        (m) => m[1],
+      );
+      expect(github.length, "the site must link to the repository").toBeGreaterThanOrEqual(2);
+      for (const href of github) {
+        expect(href.startsWith("https://github.com/kallist/CueParcel")).toBe(true);
+      }
+    });
+  });
+
   it("gives the page one h1, an h1-first heading order and a language", () => {
     const html = read("site", "index.html");
     expect([...html.matchAll(/<h1\b/g)]).toHaveLength(1);
