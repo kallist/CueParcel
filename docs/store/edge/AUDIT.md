@@ -255,6 +255,18 @@ or a rewrite of those two patterns, and both are unrelated to preparing an Edge
 submission. Recorded so the failure is not mistaken for a defect in the extension —
 it is not: no file in `src/` or `public/` differs from `main`.
 
+**Hosted CI confirms ENV-01 is Windows-only.** The pull request's GitHub Actions
+runs both completed green on this branch:
+
+| Job | Result |
+|---|---|
+| Lint / typecheck / tests / build | **pass** (35s) |
+| Extension E2E (Chromium, headed under xvfb) | **pass** (55s) |
+
+Linux checks the workflow file out as committed (LF), so the two patterns match and
+all tests pass there. The Windows failures are a checkout-convention artifact, not a
+code defect — which is exactly what the isolated worktree experiment predicted.
+
 ## 8. Microsoft Edge real-browser QA
 
 Run against **Microsoft Edge 153.0.4234.32** (`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`)
