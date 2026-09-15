@@ -41,27 +41,89 @@ CueParcel 让你可视化地挑选真正有用的内容、组合多个来源、�
 
 ### 三个真实例子
 
-| 把 issue 变成有出处的修复任务书 | 组合多个页面，只比较你选中的部分 | 挑出相关文档，打包给实现用 |
-|---|---|---|
-| <img src="docs/assets/cueparcel-card-fix.png" alt="侧边栏中显示一个由 Context Lens 选出的来源，标题为 Acceptance Criteria，角色为 Task，adapter 为 Generic Article，capture 为 Context Lens，scope 为 Selected sections"> | <img src="docs/assets/cueparcel-card-compare.png" alt="侧边栏显示 Context Cart 中有两个来源，并且选中了 Compare recipe"> | <img src="docs/assets/cueparcel-card-build.png" alt="侧边栏的 TaskSpec 预览中列出了两个来源各自的 role、adapter、capture 与 scope"> |
-| 从报告里挑出验收标准，再补一份文档作为参考来源，选择 **Fix**。 | 把两个页面都加进来源，选择 **Compare**——只有一个来源时它是禁用的。 | 只挑出相关的那几节文档，选择 **Build**。 |
+下面每一张都是生产版本扩展的真实截图。它们采用上下堆叠而不是并排三列，这样在窄窗口
+里也依然看得清。
+
+#### 修复一个 issue
+
+<img src="docs/assets/cueparcel-card-fix.png" width="100%" alt="侧边栏中显示一个由 Context Lens 选出的来源，标题为 Acceptance Criteria，角色为 Task，adapter 为 Generic Article，capture 为 Context Lens，scope 为 Selected sections，并已选中 Fix recipe">
+
+从报告里挑出验收标准，再补一份文档作为参考来源，选择 **Fix** —— 把 issue 变成一份
+有出处可循的修复任务书。
+
+#### 对比多个来源
+
+<img src="docs/assets/cueparcel-card-compare.png" width="100%" alt="侧边栏显示 Context Cart 中有两个来源，并且选中了 Compare recipe">
+
+把两个页面都加进来源，选择 **Compare**。只有一个来源时它是禁用的，所以不会用单一
+来源编造出「对比」。
+
+#### 从文档构建
+
+<img src="docs/assets/cueparcel-card-build.png" width="100%" alt="侧边栏的 TaskSpec 预览中列出了两个来源各自的 role、adapter、capture 与 scope">
+
+只挑出相关的那几节文档，选择 **Build** —— 把它们打包给实现用。
 
 ## 为什么要用 CueParcel
 
-| | 只复制 URL | 复制粘贴整个页面 | **CueParcel** |
-|---|---|---|---|
-| 作用范围可控 | ✗ agent 自己去抓，抓到什么算什么 | ✗ 整页都进去 | **✓ 可视化挑选取区** |
-| 多来源 | 一次一个 | 手工拼接 | **✓ Context Cart** |
-| 来源角色 | ✗ | ✗ | **✓ Task / Reference / Evidence / Example / Selection** |
-| 来源内容与生成内容分离 | ✗ | ✗ | **✓ 每一层都强制分离** |
-| 出处信息（provenance） | ✗ | ✗ | **✓ 类型 + 捕获方式 + 范围，三者从不混为一谈** |
-| 任务意图 | 每次手写 | 每次手写 | **✓ Learn / Compare / Verify / Build / Fix** |
-| 机器可读契约 | ✗ | ✗ | **✓ 带版本号的 TaskSpec JSON** |
-| 本地优先 | 取决于 agent | 取决于 agent | **✓ 数据不离开浏览器** |
-| 发送前可检查 | ✗ | ✗ | **✓ Agent / Markdown / TaskSpec + Receipt** |
-
 只给一个 URL，等于让 agent 自己去猜上下文。整页粘贴，等于把导航栏、页脚和一堆无关
 章节一起塞进去。CueParcel 是中间那条路：**上下文由你选，而且你能看见自己到底选了什么。**
+
+下面每一条都在对比同样三种做法。
+
+#### 作用范围可控
+
+- **只复制 URL：** ✗ agent 自己去抓，抓到什么算什么
+- **复制粘贴整个页面：** ✗ 整页都进去
+- **CueParcel：** ✓ 可视化挑选取区
+
+#### 多来源
+
+- **只复制 URL：** 一次一个
+- **复制粘贴整个页面：** 手工拼接
+- **CueParcel：** ✓ Context Cart
+
+#### 来源角色
+
+- **只复制 URL：** ✗
+- **复制粘贴整个页面：** ✗
+- **CueParcel：** ✓ Task / Reference / Evidence / Example / Selection
+
+#### 来源内容与生成内容分离
+
+- **只复制 URL：** ✗
+- **复制粘贴整个页面：** ✗
+- **CueParcel：** ✓ 每一层都强制分离
+
+#### 出处信息（provenance）
+
+- **只复制 URL：** ✗
+- **复制粘贴整个页面：** ✗
+- **CueParcel：** ✓ 类型 + 捕获方式 + 范围，三者从不混为一谈
+
+#### 任务意图
+
+- **只复制 URL：** 每次手写
+- **复制粘贴整个页面：** 每次手写
+- **CueParcel：** ✓ Learn / Compare / Verify / Build / Fix
+
+#### 机器可读契约
+
+- **只复制 URL：** ✗
+- **复制粘贴整个页面：** ✗
+- **CueParcel：** ✓ 带版本号的 TaskSpec JSON
+
+#### 本地优先
+
+- **只复制 URL：** 取决于 agent
+- **复制粘贴整个页面：** 取决于 agent
+- **CueParcel：** ✓ 数据不离开浏览器
+
+#### 发送前可检查
+
+- **只复制 URL：** ✗
+- **复制粘贴整个页面：** ✗
+- **CueParcel：** ✓ Agent / Markdown / TaskSpec + Receipt
 
 ## 快速开始
 

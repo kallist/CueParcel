@@ -213,7 +213,7 @@ describe("README presentation", () => {
       /sends? (your|the) (data|context) to (an? )?(AI|LLM|model)/i,
       /summari[sz]es? (it|your|the) (with|using) (an? )?(AI|LLM|model)/i,
       // A claim that the product syncs. The privacy section legitimately says
-      // "no cloud sync" —?an absence statement —?so a bare /cloud sync/ match
+      // "no cloud sync" — an absence statement — so a bare /cloud sync/ match
       // would flag the very sentence that makes the honest claim.
       /(?<!no )(?<!without )(?<!not )cloud sync/i,
     ];
@@ -225,6 +225,152 @@ describe("README presentation", () => {
     expect(README).toMatch(/prepares? and copies context/i);
     // And the privacy promise must be stated as an absence.
     expect(README).toMatch(/no cloud sync/i);
+  });
+
+  /**
+   * Mobile readability (the L8 gap).
+   *
+   * The two wide layouts — the 4-column "Why CueParcel" comparison and the
+   * 3-column image grid — were replaced with naturally wrapping stacked
+   * structures so the README stays readable in a narrow window. Measured with a
+   * GFM-subset renderer at 360px: the old comparison table demanded 2.17x its
+   * width in sideways scrolling; the stacked version demands none.
+   *
+   * These tests pin the STRUCTURE, not the prose, so wording can still change.
+   */
+  describe("mobile-friendly structure", () => {
+    /** The text between two top-level headings. */
+    function section(markdown: string, from: string, to: string): string {
+      const start = markdown.indexOf(from);
+      const end = markdown.indexOf(to);
+      expect(start, `missing section heading: ${from}`).toBeGreaterThanOrEqual(0);
+      expect(end, `missing section heading: ${to}`).toBeGreaterThan(start);
+      return markdown.slice(start, end);
+    }
+
+    /** Markdown table lines inside a fragment. */
+    const tableLines = (fragment: string): string[] =>
+      fragment.split("\n").filter((line) => /^\s*\|/.test(line));
+
+    /** Rows in the FIRST markdown table of a fragment, header row included. */
+    function firstTableColumns(fragment: string): number {
+      const lines = fragment.split("\n");
+      const start = lines.findIndex((line) => /^\s*\|/.test(line));
+      if (start < 0) return 0;
+      const row = lines[start].trim().replace(/^\||\|$/g, "");
+      return row.split("|").length;
+    }
+
+    it("keeps the Why CueParcel comparison out of a wide table", () => {
+      for (const [name, markdown, from, to] of [
+        ["README.md", README, "## Why CueParcel", "## Quick Start"],
+        ["README_ZH.md", README_ZH, "## 为什么要用 CueParcel", "## 快速开始"],
+      ] as const) {
+        const fragment = section(markdown, from, to);
+        const columns = firstTableColumns(fragment);
+        expect(
+          columns,
+          `${name} reintroduced a multi-column comparison table (${columns} columns)`,
+        ).toBeLessThanOrEqual(1);
+        // The old shape had 9 data rows plus a header in a single table.
+        expect(
+          tableLines(fragment).length,
+          `${name} still contains ${tableLines(fragment).length} table lines in the comparison section`,
+        ).toBe(0);
+      }
+    });
+
+    it("keeps the three examples out of a side-by-side image table", () => {
+      for (const [name, markdown, from, to] of [
+        ["README.md", README, "### Three real examples", "## Why CueParcel"],
+        ["README_ZH.md", README_ZH, "### 三个真实例子", "## 为什么要用 CueParcel"],
+      ] as const) {
+        const fragment = section(markdown, from, to);
+        expect(
+          tableLines(fragment).length,
+          `${name} still lays the three examples out as a table`,
+        ).toBe(0);
+        // Three separate sub-headings, i.e. stacked examples.
+        expect(
+          fragment.match(/^#### /gm)?.length ?? 0,
+          `${name} does not have three stacked example headings`,
+        ).toBe(3);
+      }
+    });
+
+    it("keeps all nine comparison dimensions in both READMEs", () => {
+      const english = [
+        "Scope control",
+        "Multiple sources",
+        "Source roles",
+        "Source vs generated separation",
+        "Provenance",
+        "Task intent",
+        "Machine-readable contract",
+        "Local-first",
+        "Inspect before sending",
+      ];
+      const chinese = [
+        "作用范围可控",
+        "多来源",
+        "来源角色",
+        "来源内容与生成内容分离",
+        "出处信息",
+        "任务意图",
+        "机器可读契约",
+        "本地优先",
+        "发送前可检查",
+      ];
+      const enFragment = section(README, "## Why CueParcel", "## Quick Start");
+      const zhFragment = section(README_ZH, "## 为什么要用 CueParcel", "## 快速开始");
+      for (const dimension of english) {
+        expect(enFragment, `README lost the comparison dimension: ${dimension}`).toContain(
+          `#### ${dimension}`,
+        );
+      }
+      for (const dimension of chinese) {
+        expect(zhFragment, `README_ZH lost the comparison dimension: ${dimension}`).toContain(
+          `#### ${dimension}`,
+        );
+      }
+      // And each dimension must actually compare all three approaches.
+      const comparisonBullets = enFragment.match(/^- \*\*(Copy the URL|Copy \/ paste the page|CueParcel):\*\*/gm) ?? [];
+      expect(comparisonBullets.length, "each dimension needs three comparison bullets").toBe(27);
+    });
+
+    it("keeps all three example screenshots in both READMEs", () => {
+      const cards = ["cueparcel-card-fix.png", "cueparcel-card-compare.png", "cueparcel-card-build.png"];
+      for (const [name, markdown, from, to] of [
+        ["README.md", README, "### Three real examples", "## Why CueParcel"],
+        ["README_ZH.md", README_ZH, "### 三个真实例子", "## 为什么要用 CueParcel"],
+      ] as const) {
+        const fragment = section(markdown, from, to);
+        for (const card of cards) {
+          expect(fragment, `${name} lost the example screenshot ${card}`).toContain(card);
+        }
+        // Each image must carry a descriptive alt and be constrained to the width.
+        for (const tag of [...fragment.matchAll(/<img[^>]*>/g)].map((m) => m[0])) {
+          expect(tag, `${name} has an unconstrained or unlabelled image: ${tag.slice(0, 60)}`).toMatch(
+            /width="100%"/,
+          );
+          expect(tag, `${name} has an image with short alt text: ${tag.slice(0, 60)}`).toMatch(
+            /alt="[^"]{20,}"/,
+          );
+        }
+      }
+    });
+
+    it("keeps both READMEs at the same heading depth profile", () => {
+      // Neither language may be structurally richer than the other.
+      const profile = (markdown: string) => ({
+        h2: (markdown.match(/^## /gm) ?? []).length,
+        h3: (markdown.match(/^### /gm) ?? []).length,
+        h4: (markdown.match(/^#### /gm) ?? []).length,
+      });
+      expect(profile(README_ZH)).toEqual(profile(README));
+      // The hotfix added nine comparison and three example sub-headings.
+      expect(profile(README).h4).toBeGreaterThanOrEqual(12);
+    });
   });
 
   it("has exactly one star call to action", () => {

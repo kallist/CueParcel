@@ -51,28 +51,92 @@ Context Lens, add a documentation source, choose **Fix**, and inspect the
 
 ### Three real examples
 
-| Turn an issue into a source-grounded repair brief | Combine pages and compare only what you selected | Pick the relevant docs and package them for implementation |
-|---|---|---|
-| <img src="docs/assets/cueparcel-card-fix.png" alt="Side Panel showing one Context Lens-picked source titled Acceptance Criteria, role Task, adapter Generic Article, capture Context Lens, scope Selected sections"> | <img src="docs/assets/cueparcel-card-compare.png" alt="Side Panel with two sources in the Context Cart and the Compare recipe selected"> | <img src="docs/assets/cueparcel-card-build.png" alt="Side Panel showing the TaskSpec preview listing two sources with their roles, adapters, capture methods and scopes"> |
-| Pick the acceptance criteria out of the report, add the documentation as a reference source, choose **Fix**. | Add both pages as sources and choose **Compare** — it stays disabled until there really are two sources. | Pick the relevant documentation sections and choose **Build**. |
+Each of these is a real screenshot of the production extension. They are stacked
+rather than laid out side by side so they stay readable in a narrow window.
+
+#### Fix an issue
+
+<img src="docs/assets/cueparcel-card-fix.png" width="100%" alt="Side Panel showing one Context Lens-picked source titled Acceptance Criteria, role Task, adapter Generic Article, capture Context Lens, scope Selected sections, with the Fix recipe selected">
+
+Pick the acceptance criteria out of the report, add the documentation as a
+reference source, choose **Fix** — turn an issue into a source-grounded repair
+brief.
+
+#### Compare sources
+
+<img src="docs/assets/cueparcel-card-compare.png" width="100%" alt="Side Panel with two sources in the Context Cart and the Compare recipe selected">
+
+Add both pages as sources and choose **Compare**. It stays disabled until there
+really are two sources, so a comparison is never invented from one.
+
+#### Build from docs
+
+<img src="docs/assets/cueparcel-card-build.png" width="100%" alt="Side Panel showing the TaskSpec preview listing two sources with their roles, adapters, capture methods and scopes">
+
+Pick the relevant documentation sections and choose **Build** — package them for
+implementation.
 
 ## Why CueParcel
-
-| | Copy the URL | Copy / paste the page | **CueParcel** |
-|---|---|---|---|
-| Scope control | ✗ the agent fetches everything | ✗ the whole page goes in | **✓ pick sections visually** |
-| Multiple sources | one at a time | manual concatenation | **✓ Context Cart** |
-| Source roles | ✗ | ✗ | **✓ Task / Reference / Evidence / Example / Selection** |
-| Source vs generated separation | ✗ | ✗ | **✓ enforced in every layer** |
-| Provenance | ✗ | ✗ | **✓ type + capture method + scope, never conflated** |
-| Task intent | typed by hand each time | typed by hand each time | **✓ Learn / Compare / Verify / Build / Fix** |
-| Machine-readable contract | ✗ | ✗ | **✓ versioned TaskSpec JSON** |
-| Local-first | depends on the agent | depends on the agent | **✓ nothing leaves the browser** |
-| Inspect before sending | ✗ | ✗ | **✓ Agent / Markdown / TaskSpec + Receipt** |
 
 Copying a URL asks the agent to go and find context. Copying the page hands it
 navigation, footers and unrelated sections. CueParcel is the middle path: you
 choose the context, and you can see exactly what you chose.
+
+Each row below compares the same three approaches.
+
+#### Scope control
+
+- **Copy the URL:** ✗ the agent fetches everything
+- **Copy / paste the page:** ✗ the whole page goes in
+- **CueParcel:** ✓ pick sections visually
+
+#### Multiple sources
+
+- **Copy the URL:** one at a time
+- **Copy / paste the page:** manual concatenation
+- **CueParcel:** ✓ Context Cart
+
+#### Source roles
+
+- **Copy the URL:** ✗
+- **Copy / paste the page:** ✗
+- **CueParcel:** ✓ Task / Reference / Evidence / Example / Selection
+
+#### Source vs generated separation
+
+- **Copy the URL:** ✗
+- **Copy / paste the page:** ✗
+- **CueParcel:** ✓ enforced in every layer
+
+#### Provenance
+
+- **Copy the URL:** ✗
+- **Copy / paste the page:** ✗
+- **CueParcel:** ✓ type + capture method + scope, never conflated
+
+#### Task intent
+
+- **Copy the URL:** typed by hand each time
+- **Copy / paste the page:** typed by hand each time
+- **CueParcel:** ✓ Learn / Compare / Verify / Build / Fix
+
+#### Machine-readable contract
+
+- **Copy the URL:** ✗
+- **Copy / paste the page:** ✗
+- **CueParcel:** ✓ versioned TaskSpec JSON
+
+#### Local-first
+
+- **Copy the URL:** depends on the agent
+- **Copy / paste the page:** depends on the agent
+- **CueParcel:** ✓ nothing leaves the browser
+
+#### Inspect before sending
+
+- **Copy the URL:** ✗
+- **Copy / paste the page:** ✗
+- **CueParcel:** ✓ Agent / Markdown / TaskSpec + Receipt
 
 ## Quick Start
 
