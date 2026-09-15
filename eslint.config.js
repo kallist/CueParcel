@@ -139,9 +139,11 @@ export default tseslint.config(
      * the callback passed to `page.evaluate()` legitimately uses browser globals
      * even though the file itself runs in Node.
      */
-    files: ["scripts/generate-social-preview.mjs"],
+    files: ["scripts/generate-social-preview.mjs", "scripts/capture-store-assets.mjs"],
     languageOptions: {
-      globals: { ...globals.node, ...globals.browser },
+      // `chrome` is not in globals.browser, but these scripts read the loaded
+      // extension's manifest through the service worker, so it is real here.
+      globals: { ...globals.node, ...globals.browser, chrome: "readonly" },
     },
   },
   {

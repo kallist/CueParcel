@@ -14,6 +14,7 @@
     "build": "vite build && vite build --config vite.content.config.ts && node scripts/validate-build.mjs",
     "build:e2e": "npm run build && node scripts/build-e2e.mjs",
     "package:release": "npm run build && node scripts/package-release.mjs",
+    "assets:store": "npm run build && node scripts/capture-store-assets.mjs",
     "test:e2e": "npm run build:e2e && playwright test",
     "test:e2e:headed": "npm run build:e2e && playwright test --headed",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",

@@ -831,22 +831,126 @@ describe("landing page", () => {
   const SITE = join(rootDir, "site");
 
   it("is a static site with no build step and no external requests", () => {
-    for (const file of ["index.html", "styles.css", "main.js"]) {
+    for (const file of ["index.html", "styles.css", "main.js", "privacy.html"]) {
       expect(existsSync(join(SITE, file)), `missing site/${file}`).toBe(true);
     }
-    const sources = ["index.html", "styles.css", "main.js"].map((f) => read("site", f)).join("\n");
+    const sources = ["index.html", "styles.css", "main.js", "privacy.html"]
+      .map((f) => read("site", f))
+      .join("\n");
     /**
      * Every `http(s)://` reference must point at the project's own GitHub
-     * repository or its releases. A CDN font, a remote script, an analytics
-     * beacon or a tracking pixel would all show up here.
+     * repository — the repository itself, its releases, or its issue tracker.
+     * A CDN font, a remote script, an analytics beacon or a tracking pixel would
+     * all show up here.
+     *
+     * The issue tracker is allowed because both the landing page and the privacy
+     * policy name it as the support contact for the extension listings, and it is
+     * the same project on the same origin as the repository link. Nothing is
+     * fetched from it: these are anchors, not subresources.
+     *
+     * The privacy policy is held to the same rule as the landing page: it is the
+     * URL handed to browser-extension stores, so it may not depend on anything it
+     * does not ship itself.
      */
-    const allowed = /^https:\/\/github\.com\/kallist\/CueParcel(\/releases(\/latest)?)?$/;
+    const allowed =
+      /^https:\/\/github\.com\/kallist\/CueParcel(\/(issues|releases(\/latest)?))?$/;
     const offenders = [...sources.matchAll(/https?:\/\/[^\s"'<>)]+/g)]
       .map((m) => m[0].replace(/["'`].*$/, ""))
       .filter((url) => !allowed.test(url));
     expect(offenders, `external references in site/: ${offenders.join(", ")}`).toEqual([]);
     // And nothing may be fetched over plain http.
     expect(sources).not.toMatch(/http:\/\//);
+  });
+
+  it("keeps the published privacy policy self-contained", () => {
+    const html = read("site", "privacy.html");
+
+    // The store-facing URL must resolve at /CueParcel/privacy.html, so every
+    // local reference has to be relative to this file's own directory.
+    const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]);
+    expect(refs.length).toBeGreaterThan(5);
+    const rootAbsolute = refs.filter((r) => r.startsWith("/") && !r.startsWith("//"));
+    expect(
+      rootAbsolute,
+      `root-absolute references would break under /CueParcel/: ${rootAbsolute.join(", ")}`,
+    ).toEqual([]);
+    const local = refs.filter((r) => !/^(https?:|mailto:|#|data:)/.test(r));
+    const missing = local.filter((r) => !existsSync(join(SITE, r.split("#")[0])));
+    expect(missing, `privacy.html references missing local files: ${missing.join(", ")}`).toEqual([]);
+
+    // The page is static: no script may run on it.
+    expect(html, "the privacy policy must not load a script").not.toMatch(/<script\b/i);
+
+    // Every privacy promise the store submission relies on must be stated.
+    for (const promise of [
+      /chrome\.storage\.session/,
+      /chrome\.storage\.local/,
+      /page2agent\.onboarding\.pinDismissed\.v1/,
+      /no host permissions/i,
+      /no remote code/i,
+      /no analytics/i,
+      /no telemetry/i,
+      /not collect/i,
+      /Last updated/,
+    ]) {
+      expect(html, `privacy.html does not state ${promise}`).toMatch(promise);
+    }
+
+    // A policy that claimed to "collect no data" without distinguishing access
+    // from off-device collection was rejected during review; pin the distinction.
+    expect(html).toMatch(/accesses webpage content at your request/i);
+    expect(html).toMatch(/does <strong>not collect<\/strong>/i);
+
+    // The four permissions must be listed with their real names.
+    for (const permission of ["activeTab", "scripting", "sidePanel", "storage"]) {
+      expect(html, `privacy.html does not explain ${permission}`).toContain(`<code>${permission}</code>`);
+    }
+  });
+
+  it("does not claim the shipped bundle is free of network calls", () => {
+    /**
+     * `dist/assets/sidepanel.js` legitimately contains Vite's module-preload
+     * helper, which calls `fetch` on same-extension module-preload hrefs, and
+     * AUDIT.md §3 documents exactly that. The privacy and store documents must
+     * therefore not claim that no `fetch` — or no network API at all — exists in
+     * the shipped bundle. The true claim is the narrower one: no
+     * application-authored outbound call, and no external endpoint.
+     */
+    const docs: Array<[string, string]> = [
+      ["PRIVACY.md", read("PRIVACY.md")],
+      ["site/privacy.html", read("site", "privacy.html")],
+      ["docs/store/edge/privacy-answers.md", read("docs", "store", "edge", "privacy-answers.md")],
+    ];
+    /**
+     * These are the exact absolute constructions the documents used before the
+     * bundled preload helper was accounted for. They assert absence across the
+     * whole package, which is false; the corrected wording scopes the absence to
+     * the application source and names the helper separately. Matching the
+     * constructions rather than a loose "no fetch … shipped" window avoids
+     * flagging the corrected sentences, which mention both on purpose.
+     */
+    const falseAbsolutes = [
+      /no\s+network\s+APIs?\s+anywhere/i,
+      /no\s+network\s+requests?\s+of\s+its\s+own/i,
+      /source or its shipped bundle/i,
+      /source or shipped bundle/i,
+    ];
+    for (const [name, text] of docs) {
+      for (const pattern of falseAbsolutes) {
+        expect(text, `${name} still claims the whole package has no network calls: ${pattern}`).not.toMatch(
+          pattern,
+        );
+      }
+      // The precise qualification has to be present instead of the absolute claim.
+      expect(text, `${name} does not mention the bundled preload helper`).toMatch(
+        /module-preload|modulepreload/i,
+      );
+    }
+
+    // The audit the claim rests on must still document the helper and its file.
+    const audit = read("docs", "store", "edge", "AUDIT.md");
+    expect(audit, "AUDIT.md no longer documents the bundled fetch").toMatch(/Vite's\s+module-preload/);
+    expect(audit).toContain("dist/assets/sidepanel.js");
   });
 
   it("points every local asset reference at a file that exists", () => {

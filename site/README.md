@@ -10,17 +10,26 @@ Plain static files, uploaded to Pages exactly as they are:
 
 ```text
 site/
-  index.html                     the page
-  styles.css                     all styling
+  index.html                     the landing page
+  privacy.html                   the privacy policy (the URL given to extension stores)
+  styles.css                     all styling, shared by both pages
   main.js                        the only script (reduced-motion GIF fallback)
   assets/                        the real product screenshots and the mark
   .nojekyll                      empty marker; stops Jekyll processing
 ```
 
 **No build step, no framework, no package manager, no CDN.** Nothing here is
-generated: `index.html`, `styles.css` and `main.js` are committed as authored, and
-the images in `assets/` are copies of the real captures committed under
+generated: the HTML, `styles.css` and `main.js` are committed as authored, and the
+images in `assets/` are copies of the real captures committed under
 `docs/assets/`.
+
+`privacy.html` is the canonical public policy at
+`https://kallist.github.io/CueParcel/privacy.html`, the URL referenced by the
+extension's store listing. It mirrors `PRIVACY.md` at the repository root, and like
+the landing page it is a static file with no scripting: `tests/unit/packaging/
+launch-packaging.test.ts` asserts that it loads no script, references nothing
+outside this project except the project's own GitHub repository and issue tracker,
+and still states every privacy promise the store submission relies on.
 
 ## Why GitHub Actions instead of branch publishing
 

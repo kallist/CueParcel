@@ -276,6 +276,11 @@ TaskSpec carries the same split (`adapter`, `captureMethod`, `scope`).
 
 This is a statement of what the code does. It is not a security certification.
 
+The full policy, including the exact storage table and the audit behind every
+claim, is in [`PRIVACY.md`](PRIVACY.md) and published at
+<https://kallist.github.io/CueParcel/privacy.html> — the URL given to browser
+extension stores.
+
 ## How it works
 
 ```text
