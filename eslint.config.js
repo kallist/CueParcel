@@ -133,4 +133,20 @@ export default tseslint.config(
       globals: { ...globals.node },
     },
   },
+  {
+    /**
+     * The launch landing page is plain browser JavaScript with no build step and
+     * no module system, so it is linted against browser globals and is allowed to
+     * declare globals the way an inline script does.
+     */
+    files: ["site/**/*.js"],
+    languageOptions: {
+      globals: { ...globals.browser },
+      sourceType: "script",
+    },
+    rules: {
+      "no-var": "off",
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+    },
+  },
 );

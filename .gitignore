@@ -5,6 +5,11 @@ node_modules/
 dist/
 dist-e2e/
 
+# Release artifacts: built by `npm run package:release`, published as GitHub
+# Release assets, never committed to the repository.
+cueparcel-v*-chromium.zip
+SHA256SUMS.txt
+
 # Test artifacts
 coverage/
 playwright-report/

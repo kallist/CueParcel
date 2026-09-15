@@ -1,0 +1,48 @@
+{
+  "generatedFrom": "page-qa/launch-raw/2x",
+  "assets": [
+    {
+      "name": "cueparcel-hero.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 201505
+    },
+    {
+      "name": "cueparcel-card-fix.png",
+      "width": 1200,
+      "height": 760,
+      "bytes": 149587
+    },
+    {
+      "name": "cueparcel-card-compare.png",
+      "width": 1200,
+      "height": 760,
+      "bytes": 202907
+    },
+    {
+      "name": "cueparcel-card-build.png",
+      "width": 1200,
+      "height": 760,
+      "bytes": 148126
+    },
+    {
+      "name": "cueparcel-social-preview.png",
+      "width": 1200,
+      "height": 630,
+      "bytes": 68924
+    },
+    {
+      "name": "cueparcel-social-card.png",
+      "width": 1200,
+      "height": 630,
+      "bytes": 68924
+    },
+    {
+      "name": "cueparcel-demo.gif",
+      "width": 980,
+      "height": 470,
+      "bytes": 225552,
+      "frames": 9
+    }
+  ]
+}
