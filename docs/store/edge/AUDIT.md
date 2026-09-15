@@ -212,24 +212,27 @@ and regenerating the imagery with `npm run assets:store`.
 
 ## 7. Verification gates (run for this submission)
 
-All commands run in the repository root on the machine that prepared this pack
-(Windows, `core.autocrlf=true`).
+The authoritative run below was made in a **clean isolated worktree with LF line
+endings** (`core.autocrlf=false`), which is how GitHub's Linux runners check the
+repository out. ENV-01 below records the single difference a Windows checkout with
+CRLF introduces; ENV-02 records the artifact-ordering requirement.
 
 | Gate | Command | Result |
 |---|---|---|
 | Clean install | `npm ci` | PASS — 238 packages, 0 vulnerabilities |
 | Lint | `npm run lint` | PASS |
 | Types | `npm run typecheck` | PASS |
-| Unit + integration | `npm run test` | **792 passed, 2 failed** — see ENV-01 |
+| Unit + integration | `npm run test` | PASS — **794 passed across 74 files, 0 failed** (run after the release artifact exists; see ENV-02) |
 | Build | `npm run build` | PASS — `Build validation PASSED: dist/ is a structurally valid MV3 extension artifact` |
 | Extension E2E | `npm run test:e2e` | PASS — 13 passed / 13 |
-| Combined gate | `npm run verify:all` | FAILS at the unit-test step because of ENV-01, so `test:e2e` never runs inside it. Run separately, as above, it passes |
+| Combined gate | `npm run verify:all` | PASS — lint, typecheck, 794 unit tests, build and 13 E2E tests all green |
 | Dependency audit | `npm audit --audit-level=low` | PASS — `found 0 vulnerabilities` |
-| Whitespace / conflict check | `git diff --check` | PASS — clean |
+| Whitespace / conflict check | `git diff --check origin/main...HEAD` | PASS — clean |
 | Release artifact | SHA-256 of `cueparcel-v1.1.0-chromium.zip` recomputed before and after the whole run | PASS — unchanged, matches `SHA256SUMS.txt` |
 
-**ENV-01 (pre-existing, environment-only, not caused by this submission).** The two
-failing unit tests are in `tests/unit/packaging/launch-packaging.test.ts`:
+**ENV-01 (pre-existing, environment-only, not caused by this submission).** On a
+Windows checkout with `core.autocrlf=true`, two unit tests in
+`tests/unit/packaging/launch-packaging.test.ts` fail:
 
 - `landing page > GitHub Pages deployment > declares exactly the permissions a
   Pages deployment needs`
@@ -255,8 +258,16 @@ or a rewrite of those two patterns, and both are unrelated to preparing an Edge
 submission. Recorded so the failure is not mistaken for a defect in the extension —
 it is not: no file in `src/` or `public/` differs from `main`.
 
-**Hosted CI confirms ENV-01 is Windows-only.** The pull request's GitHub Actions
-runs both completed green on this branch:
+**ENV-02 (environmental, ordering).** The packaging tests validate the real release
+artifact, and that artifact is gitignored. On a fresh checkout, `npm run test` alone
+therefore fails five packaging tests until the artifact exists. `.github/workflows/
+ci.yml` runs `npm run package:release` before `npm run test` for exactly this reason,
+and the isolated run recorded above was made in that same order. Run in the wrong
+order the failure looks like a release-gate failure while being nothing of the kind.
+
+**Hosted CI confirms ENV-01 is Windows-only.** On the branch revisions
+`42fd9d667a27`, `99f212fea74f` and `69fd6e5f9c0a`, both GitHub Actions runs
+completed green (4 check runs per revision, all `success`):
 
 | Job | Result |
 |---|---|
@@ -266,6 +277,10 @@ runs both completed green on this branch:
 Linux checks the workflow file out as committed (LF), so the two patterns match and
 all tests pass there. The Windows failures are a checkout-convention artifact, not a
 code defect — which is exactly what the isolated worktree experiment predicted.
+
+That hosted-CI evidence is attributed to the revisions listed above. Refreshing this
+branch onto `main` produced a new head, so the refreshed head's own hosted-CI result
+is recorded in the pull request description, not claimed here in advance.
 
 ## 8. Microsoft Edge real-browser QA
 
