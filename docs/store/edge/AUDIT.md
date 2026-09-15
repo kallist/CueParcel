@@ -141,6 +141,14 @@ icons/icon128.png
 | No remote code | PASS |
 | Deterministic build | `scripts/package-release.mjs` fixes ZIP timestamps to the DOS epoch and re-reads the archive afterwards to self-check the manifest root and entry integrity |
 
+**The same bytes are published.** GitHub Release
+[`v1.1.0`](https://github.com/kallist/CueParcel/releases/tag/v1.1.0) carries
+`cueparcel-v1.1.0-chromium.zip` (129,082 bytes) and `SHA256SUMS.txt`. The released
+asset was downloaded and compared with the local artifact: same length, same
+SHA-256 (`63d57d54…b4f6`). A reviewer who wants a public copy to compare against the
+uploaded package can take that one; it is the artifact this audit and the Edge QA
+actually ran against.
+
 ## 6. Findings that are NOT blockers but are recorded honestly
 
 **AUDIT-01 (LOW, cosmetic, user-visible in Edge).** Two user-facing strings name

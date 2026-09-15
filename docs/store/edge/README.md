@@ -45,6 +45,12 @@ This matches `SHA256SUMS.txt` and is re-verified by `AUDIT.md`. The v1.1.0 relea
 is not modified by this submission pack: no extension source, manifest or version
 number is changed.
 
+The identical bytes are published at
+<https://github.com/kallist/CueParcel/releases/tag/v1.1.0> — the release asset was
+downloaded and compared during this audit (same length, same SHA-256), so the
+extension QA recorded in `AUDIT.md` §8 ran against the released artifact, not a
+private rebuild.
+
 ## Privacy policy URL
 
 ```text

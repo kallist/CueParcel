@@ -21,6 +21,12 @@ WHAT YOU NEED TO TEST IT
 Nothing. No account, no sign-in, no API key, no backend, no configuration, no
 network connection beyond loading the test page itself. Install and use.
 
+The submitted package is also published at
+https://github.com/kallist/CueParcel/releases/tag/v1.1.0 — the asset
+cueparcel-v1.1.0-chromium.zip there is byte-identical to the uploaded one
+(SHA-256 63d57d5464043ed5b3f52ddde37abaa595c59eea798c1a3f91cf07da82b1b4f6), so you
+can compare the uploaded package against a public copy if that helps.
+
 PERMISSIONS AND WHY THEY BEHAVE THE WAY THEY DO
 - activeTab: CueParcel reads a page ONLY after the user activates the extension on
   that page. There is no background access, no scheduled access, and no access to
