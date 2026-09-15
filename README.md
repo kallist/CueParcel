@@ -27,7 +27,7 @@ choose what you want AI to do, inspect the package, and copy it to any agent.
 
 <!--
   The repository's social preview (Settings -> General -> Social preview) is a
-  GitHub UI setting with no file-based equivalent, so the prepared 1200x630 card
+  GitHub UI setting with no file-based equivalent, so the prepared 1280x640 card
   (docs/assets/cueparcel-social-preview.png) is deliberately NOT embedded above:
   GitHub would render the raw PNG at full width as a large block of text-and-logo
   with nothing for a reader to learn. It is uploaded manually — see

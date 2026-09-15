@@ -541,6 +541,76 @@ describe("launch assets", () => {
     });
   });
 
+  /**
+   * `docs/assets/manifest.json` describes the launch assets. It had drifted: it
+   * advertised the social preview as 1200x630 and listed a social-card variant
+   * that no longer exists, which is exactly how a stale reference survives a
+   * cleanup. These tests make the manifest answerable to the filesystem.
+   */
+  describe("asset manifest", () => {
+    const manifest = JSON.parse(read("docs", "assets", "manifest.json")) as {
+      assets: { name: string; width: number; height: number; bytes: number; frames?: number }[];
+    };
+
+    it("lists every asset that is actually on disk, and nothing else", () => {
+      const dir = join(rootDir, "docs", "assets");
+      const onDisk = readdirSync(dir)
+        .filter((name) => /\.(png|gif)$/.test(name))
+        .sort();
+      const listed = manifest.assets.map((a) => a.name).sort();
+      expect(listed).toEqual(onDisk);
+    });
+
+    it("records dimensions and sizes that match the real files", () => {
+      for (const entry of manifest.assets) {
+        const buffer = readFileSync(join(rootDir, "docs", "assets", entry.name));
+        const isPng = entry.name.endsWith(".png");
+        const width = isPng ? buffer.readUInt32BE(16) : buffer.readUInt16LE(6);
+        const height = isPng ? buffer.readUInt32BE(20) : buffer.readUInt16LE(8);
+        expect(entry.width, `${entry.name} width in the manifest`).toBe(width);
+        expect(entry.height, `${entry.name} height in the manifest`).toBe(height);
+        expect(entry.bytes, `${entry.name} byte size in the manifest`).toBe(buffer.length);
+      }
+    });
+
+    it("holds no stale 1200x630 social reference", () => {
+      // The card canvas is 1280x640. A 1200x630 claim is the specific staleness
+      // this cleanup removed, so it must not come back. A line that names the old
+      // size as wrong is allowed.
+      const files = [
+        "README.md",
+        "README_ZH.md",
+        "docs/assets/manifest.json",
+        "docs/launch/PLAN.md",
+        "docs/launch/RELEASE.md",
+        "scripts/generate-social-preview.mjs",
+      ];
+      const offenders: string[] = [];
+      for (const file of files) {
+        if (!existsSync(join(rootDir, file))) continue;
+        const lines = readFileSync(join(rootDir, file), "utf8")
+          .split("\n")
+          .filter((line) => /1200\s*[x×]\s*630/.test(line));
+        for (const line of lines) {
+          if (/was|briefly|old|obsolete|removed|corrected|wrong|no longer/i.test(line)) continue;
+          offenders.push(`${file}: ${line.trim()}`);
+        }
+      }
+      expect(offenders, `stale 1200x630 references:\n${offenders.join("\n")}`).toEqual([]);
+    });
+
+    it("no longer ships the obsolete social-card variant", () => {
+      expect(existsSync(join(rootDir, "docs", "assets", "cueparcel-social-card.png"))).toBe(false);
+      expect(manifest.assets.some((a) => a.name === "cueparcel-social-card.png")).toBe(false);
+      const referencing = ["README.md", "README_ZH.md", "site/index.html", "docs/launch/PLAN.md"].filter(
+        (file) =>
+          existsSync(join(rootDir, file)) &&
+          readFileSync(join(rootDir, file), "utf8").includes("cueparcel-social-card"),
+      );
+      expect(referencing, `files still referencing the removed variant: ${referencing.join(", ")}`).toEqual([]);
+    });
+  });
+
   it("keeps the demo GIF small enough to load in a README", () => {
     const file = join(rootDir, "docs", "assets", "cueparcel-demo.gif");
     const buffer = readFileSync(file);
@@ -794,8 +864,9 @@ describe("landing page", () => {
   });
 
   it("does not ship the social preview twice", () => {
-    // The site is served from /site, so it must use its own copies; the
-    // 1200x630 card is only needed by the repository settings.
+    // The site is served from /site, so it must use its own copies. The 1280x640
+    // card exists only for the repository's Social preview setting, which is a
+    // GitHub UI action, so the site must not carry a second copy of it.
     const html = read("site", "index.html");
     expect(html).not.toContain("social-preview");
   });

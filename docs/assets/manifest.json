@@ -1,5 +1,5 @@
 {
-  "generatedFrom": "page-qa/launch-raw/2x",
+  "generatedFrom": "page-qa/launch-raw",
   "assets": [
     {
       "name": "cueparcel-hero.png",
@@ -27,15 +27,11 @@
     },
     {
       "name": "cueparcel-social-preview.png",
-      "width": 1200,
-      "height": 630,
-      "bytes": 68924
-    },
-    {
-      "name": "cueparcel-social-card.png",
-      "width": 1200,
-      "height": 630,
-      "bytes": 68924
+      "width": 1280,
+      "height": 640,
+      "bytes": 97596,
+      "generatedBy": "scripts/generate-social-preview.mjs",
+      "layout": "cueparcel-social-preview.layout.json"
     },
     {
       "name": "cueparcel-demo.gif",
