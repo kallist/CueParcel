@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CueParcel — Pick what matters. Pack it for AI.</title>
+<meta name="description" content="CueParcel is a local-first Chrome and Edge extension that turns any webpage into clean, source-grounded context for AI. No backend, no telemetry, no API key.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="assets/cueparcel-mark-dark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <span class="lockup">
+      <img src="assets/cueparcel-mark-dark.svg" alt="" width="26" height="26" aria-hidden="true">
+      CueParcel
+    </span>
+    <p class="muted-soft header-meta">Version 1.1.0 · MIT</p>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero wrap">
+    <h1>Pick what matters. Pack it for AI.</h1>
+    <p class="tagline">Turn any webpage into clean, source-grounded context for AI.</p>
+    <p class="one-liner">CueParcel lets you visually pick what matters, combine multiple sources, choose what you want AI to do, inspect the package, and copy it to any agent.</p>
+    <ul class="trust-line">
+      <li>No backend</li>
+      <li>No telemetry</li>
+      <li>No API key</li>
+      <li>Local-first</li>
+    </ul>
+    <div class="actions">
+      <a class="button" href="https://github.com/kallist/CueParcel">View on GitHub</a>
+      <a class="button button-secondary" href="#install">Install CueParcel</a>
+    </div>
+    <figure class="shot">
+      <img src="assets/cueparcel-hero.png" width="1600" height="900" alt="The CueParcel Side Panel open next to a web page while Context Lens is active: semantic sections of the page are outlined and the panel lists the picked sections of the current source.">
+      <figcaption>Screenshots and the recording on this page are real captures of the extension. The panel here shows Context Lens active on a page, with the picked sections listed in the Side Panel.</figcaption>
+    </figure>
+  </section>
+
+  <section class="section" id="demo">
+    <div class="wrap">
+      <h2>Live demo</h2>
+      <p class="section-lede">A real recording of the product, not a mockup. Watch the page under the cursor: each semantic region lights up before you click, and its token count appears in the panel.</p>
+      <figure class="shot">
+        <span class="demo-figure">
+          <img class="demo-gif" src="assets/cueparcel-demo.gif" width="980" height="470" alt="Animated recording of CueParcel: semantic regions of a page highlight as the cursor moves over them, sections are clicked to add or remove them from the context, and the token counts in the Side Panel update with each pick.">
+          <!--
+            Reduced-motion fallback. `src` deliberately points at the recording so
+            that WITH SCRIPTING DISABLED this still renders one non-animating
+            frame instead of nothing. A CSS media query (see styles.css) swaps the
+            animation for this still, so the preference is honoured before any
+            script runs; main.js only upgrades the still to a cleaner extracted
+            frame when it can.
+          -->
+          <img class="demo-still" id="demo-still" src="assets/cueparcel-demo.gif" width="980" height="470" alt="A still frame of the CueParcel recording, showing the page with a semantic region highlighted and the Side Panel listing the picked sections with their token counts." hidden>
+        </span>
+        <figcaption>Recording of CueParcel 1.1.0 running in a Chromium browser.</figcaption>
+        <p class="motion-note" id="demo-motion-note" hidden>Your system asks for reduced motion, so the animated recording is not played here. A single frame of it is shown instead; the screenshots elsewhere on this page show the product in the same states.</p>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="section-lede">Three steps, all of them triggered by you.</p>
+      <ol class="steps">
+        <li>
+          <h3>Capture the page</h3>
+          <p>Click the CueParcel toolbar icon on a page. Capture runs for that tab and the Side Panel opens.</p>
+        </li>
+        <li>
+          <h3>Pick what matters</h3>
+          <p>Use Context Lens to pick sections of the page visually. Add more pages, picked sections or text selections to the Context Cart.</p>
+        </li>
+        <li>
+          <h3>Pack it and copy</h3>
+          <p>Choose a recipe (Learn, Compare, Verify, Build or Fix), inspect the Agent text, Markdown or TaskSpec, then copy it into any agent.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="understands">
+    <div class="wrap">
+      <h2>What it understands</h2>
+      <p class="section-lede">Six parts, each doing one job.</p>
+      <ul class="grid">
+        <li class="card">
+          <h3>Context Lens</h3>
+          <p>Pick sections of a page visually. Semantic regions highlight on hover with live token counts; click to include or exclude. The page itself is never modified.</p>
+        </li>
+        <li class="card">
+          <h3>Context Cart</h3>
+          <p>Combine several pages, picked sections and text selections into one context, each with a role (Task, Reference, Evidence, Example, Selection) and one primary source.</p>
+        </li>
+        <li class="card">
+          <h3>Context Recipes</h3>
+          <p>Choose what the agent should do instead of writing a prompt: Learn, Compare, Verify, Build, Fix.</p>
+        </li>
+        <li class="card">
+          <h3>Semantic adapters</h3>
+          <p>Generic Article, GitHub Issue, GitHub Pull Request and Technical Documentation, with honest fallback to generic when confidence is low.</p>
+        </li>
+        <li class="card">
+          <h3>TaskSpec</h3>
+          <p>A versioned portable JSON task contract: sources, roles, provenance, adapter-verified facts, acceptance criteria only when the source states them, explicit unknowns and token estimates.</p>
+        </li>
+        <li class="card">
+          <h3>Context Receipt</h3>
+          <p>A compact summary of exactly what the agent will receive, including what was excluded. No fake quality scores.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="usecases">
+    <div class="wrap">
+      <h2>Use cases</h2>
+      <p class="section-lede">Three concrete things you can do with it today.</p>
+      <ul class="usecases">
+        <li>
+          <img src="assets/cueparcel-card-fix.png" width="1200" height="760" alt="CueParcel Side Panel with the Fix recipe selected on a GitHub issue source: the panel lists the picked issue sections as the primary source and the generated task text below.">
+          <div class="usecase-body">
+            <h3>Turn a bug report into a repair brief</h3>
+            <p>Pick the issue's acceptance criteria, add the relevant documentation as a reference source, choose Fix. The package carries the issue and your picks as separate sources with roles, so the agent can tell the report apart from the docs.</p>
+          </div>
+        </li>
+        <li>
+          <img src="assets/cueparcel-card-compare.png" width="1200" height="760" alt="CueParcel Side Panel with the Compare recipe active and two sources in the Context Cart, one marked as the primary source, with the generated comparison task text below.">
+          <div class="usecase-body">
+            <h3>Compare two pages</h3>
+            <p>Add both pages as sources and choose Compare. Compare stays disabled until there really are two sources in the cart, so you cannot ask for a comparison that has nothing to compare.</p>
+          </div>
+        </li>
+        <li>
+          <img src="assets/cueparcel-card-build.png" width="1200" height="760" alt="CueParcel Side Panel with the Build recipe selected and documentation sections picked from a technical documentation page as the source of the task.">
+          <div class="usecase-body">
+            <h3>Package documentation for implementation</h3>
+            <p>Pick the relevant documentation sections, choose Build, and copy a task that points at the documentation instead of pasting the whole site into a chat window.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="privacy">
+    <div class="wrap">
+      <h2>Privacy</h2>
+      <p class="section-lede">CueParcel prepares and copies context. It does not send your pages anywhere, and it does not call an AI provider for you.</p>
+      <ul>
+        <li>Capture is always user-triggered. Nothing runs in the background.</li>
+        <li>Everything is processed locally inside the extension. No backend, no analytics, no telemetry, no provider keys, no cloud sync, no remote code.</li>
+        <li>Session state lives in <code>chrome.storage.session</code> and is cleared when the browser closes. Captured page content is never written to <code>chrome.storage.local</code>.</li>
+        <li>Exactly four permissions, and nothing else. No host permissions and no <code>&lt;all_urls&gt;</code>.</li>
+      </ul>
+      <ul class="permissions">
+        <li><code>activeTab</code> — read the page you triggered capture on</li>
+        <li><code>scripting</code> — run the capture and lens scripts in that tab</li>
+        <li><code>sidePanel</code> — show the CueParcel panel</li>
+        <li><code>storage</code> — keep session state until the browser closes</li>
+      </ul>
+      <p class="muted-soft">CueParcel has not been through any formal security certification. The claims above describe what the extension does and which permissions it requests; they are not a certificate.</p>
+    </div>
+  </section>
+
+  <section class="section" id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p class="install-note"><strong>Chrome Web Store publication is planned, not shipped.</strong> There is no store listing yet and no store install link on this page. Today you install CueParcel from a GitHub release or by building it yourself.</p>
+      <div class="install">
+        <div class="install-column">
+          <h3>Install a release (recommended)</h3>
+          <ol>
+            <li>Download the latest release ZIP from <a href="https://github.com/kallist/CueParcel/releases/latest">GitHub Releases</a>.</li>
+            <li>Unzip it.</li>
+            <li>Open <code>chrome://extensions</code> — in Edge, <code>edge://extensions</code>.</li>
+            <li>Enable Developer mode.</li>
+            <li>Click "Load unpacked" and select the unzipped folder.</li>
+          </ol>
+          <p>Chrome and Edge do not update an unpacked extension for you, so repeat these steps when a new release appears.</p>
+        </div>
+        <div class="install-column">
+          <h3>Build from source</h3>
+          <p>Needs Git and Node.js with npm. Clone the repository address shown in the buttons on this page, then from a terminal inside the cloned folder:</p>
+          <pre><code>npm ci
+npm run build</code></pre>
+          <p>Then load the generated <code>dist/</code> folder unpacked, with the same steps as above (Developer mode, then "Load unpacked").</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <h2>CueParcel is open source</h2>
+    <p>Source, issues and releases live on GitHub. Version 1.1.0 · MIT licensed.</p>
+    <div class="actions">
+      <a class="button" href="https://github.com/kallist/CueParcel">View on GitHub</a>
+      <a class="button button-secondary" href="https://github.com/kallist/CueParcel/releases/latest">Download the latest release</a>
+    </div>
+    <p class="muted-soft">This page is a static HTML file with no analytics and no external requests. CueParcel is an independent open-source project; it is not affiliated with any AI provider.</p>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>

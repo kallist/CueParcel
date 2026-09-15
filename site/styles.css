@@ -1,0 +1,612 @@
+/* CueParcel landing page — single stylesheet, no build step, no external requests. */
+
+:root {
+  --bg: #121419;
+  --surface: #1a1e26;
+  --text: #f2f3f5;
+  --text-muted: #b6bdc9;
+  --text-muted-soft: #a6aebc;
+  --accent: #224ae6;
+  --accent-hover: #1c3ec4;
+  --accent-ink: #ffffff;
+  --accent-text: #8fa8ff;
+  --border: #2a2f3a;
+  --border-strong: #3a4150;
+  --code-bg: #0e1014;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --radius: 12px;
+  --radius-small: 8px;
+  --measure: 1080px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.65;
+  overflow-wrap: break-word;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  margin: 0 0 0.5em;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 2.15rem;
+}
+
+h2 {
+  font-size: 1.6rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+p {
+  margin: 0 0 1em;
+}
+
+ul,
+ol {
+  margin: 0 0 1em;
+  padding-left: 1.35em;
+}
+
+li {
+  margin-bottom: 0.45em;
+}
+
+li:last-child {
+  margin-bottom: 0;
+}
+
+a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  color: #b3c4ff;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent-text);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  padding: 10px 16px;
+  border-radius: 0 0 var(--radius-small) 0;
+  z-index: 10;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* ---------- layout ---------- */
+
+.wrap {
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.section {
+  padding-top: 52px;
+  padding-bottom: 52px;
+  border-top: 1px solid var(--border);
+}
+
+.section-lede {
+  color: var(--text-muted);
+  max-width: 62ch;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.muted-soft {
+  color: var(--text-muted-soft);
+  font-size: 0.95rem;
+}
+
+/* ---------- header ---------- */
+
+.site-header {
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.site-header .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+}
+
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 650;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+
+.lockup img {
+  display: block;
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+
+.site-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.95rem;
+}
+
+.site-nav li {
+  margin: 0;
+}
+
+.site-nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.header-meta {
+  margin: 0;
+}
+
+/* ---------- hero ---------- */
+
+.hero {
+  padding-top: 26px;
+  padding-bottom: 48px;
+}
+
+.hero h1 {
+  max-width: 26ch;
+}
+
+.tagline {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  margin-bottom: 0.35em;
+  max-width: 48ch;
+}
+
+.one-liner {
+  font-size: 1.05rem;
+  max-width: 62ch;
+}
+
+.trust-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  font-size: 0.95rem;
+}
+
+.trust-line li {
+  margin: 0;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 5px 13px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.button {
+  display: inline-block;
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-small);
+  padding: 12px 22px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.button:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--accent-ink);
+}
+
+.button-secondary {
+  background-color: transparent;
+  border-color: var(--border-strong);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.button-secondary:hover {
+  background-color: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.shot {
+  margin: 0;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+}
+
+.shot figcaption {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  max-width: 70ch;
+}
+
+/* The demo recording shows one static frame instead of animating when the
+   visitor asks their system for reduced motion. */
+.demo-figure {
+  display: block;
+}
+
+.demo-still {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+}
+
+[hidden] {
+  display: none;
+}
+
+/*
+ * Reduced motion is handled HERE, not only in main.js, so the preference is
+ * honoured before any script runs and still holds if scripting is unavailable.
+ * The still element's `src` is the recording itself, so the fallback renders a
+ * real frame rather than an empty box. `!important` is required because the
+ * script toggles the `hidden` attribute at runtime.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .demo-gif,
+  #demo-still[hidden] ~ .demo-gif {
+    display: none !important;
+  }
+
+  .demo-figure .demo-still {
+    display: block !important;
+  }
+}
+
+.motion-note {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  max-width: 70ch;
+}
+
+/* ---------- grid + cards ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin: 0;
+}
+
+.card h3 {
+  margin-bottom: 0.4em;
+}
+
+.card p {
+  margin-bottom: 0;
+  color: var(--text-muted);
+  font-size: 0.97rem;
+}
+
+/* ---------- steps ---------- */
+
+.steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.steps li {
+  counter-increment: step;
+  position: relative;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 20px 20px 62px;
+  margin: 0;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.steps h3 {
+  margin-bottom: 0.25em;
+}
+
+.steps p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.97rem;
+}
+
+/* ---------- use cases ---------- */
+
+.usecases {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usecases li {
+  margin: 0;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.usecases img {
+  display: block;
+  width: 100%;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg);
+}
+
+.usecase-body {
+  padding: 18px 20px 20px;
+}
+
+.usecase-body h3 {
+  margin-bottom: 0.3em;
+}
+
+.usecase-body p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.97rem;
+}
+
+/* ---------- privacy ---------- */
+
+.install-note {
+  border-left: 3px solid var(--accent);
+  background-color: var(--surface);
+  border-radius: 0 var(--radius-small) var(--radius-small) 0;
+  padding: 14px 18px;
+  margin: 0 0 18px;
+  color: var(--text-muted);
+}
+
+.install-note strong {
+  color: var(--text);
+}
+
+.permissions {
+  list-style: none;
+  margin: 0 0 1em;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+}
+
+.permissions li {
+  margin: 0;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  padding: 12px 14px;
+  font-size: 0.95rem;
+}
+
+.permissions code {
+  color: var(--text);
+}
+
+/* ---------- install ---------- */
+
+.install {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.install-column {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.install-column h3 {
+  margin-bottom: 0.35em;
+}
+
+.install-column ol,
+.install-column ul {
+  color: var(--text-muted);
+  font-size: 0.97rem;
+}
+
+.install-column p {
+  color: var(--text-muted);
+  font-size: 0.97rem;
+}
+
+.install-column p:last-child,
+.install-column ol:last-child,
+.install-column ul:last-child {
+  margin-bottom: 0;
+}
+
+code,
+.command {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 5px;
+  word-break: break-word;
+}
+
+pre {
+  margin: 0 0 1em;
+  padding: 14px 16px;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  white-space: pre;
+  word-break: normal;
+}
+
+/* ---------- footer ---------- */
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 34px;
+  padding-bottom: 46px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.site-footer h2 {
+  font-size: 1.3rem;
+  color: var(--text);
+}
+
+.site-footer .actions {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 520px) {
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+  }
+
+  .section {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  .steps li {
+    padding-left: 20px;
+  }
+
+  .steps li::before {
+    position: static;
+    margin-bottom: 10px;
+  }
+}

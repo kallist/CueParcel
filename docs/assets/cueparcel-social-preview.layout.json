@@ -1,0 +1,66 @@
+{
+  "canvas": {
+    "width": 1280,
+    "height": 640
+  },
+  "safeMargin": 64,
+  "generatedFrom": "page-qa/launch-raw/social/panel-dark-cart-fix.png",
+  "bands": [
+    {
+      "name": "lockup",
+      "left": 64,
+      "right": 732.15625,
+      "top": 177.5,
+      "bottom": 223.5,
+      "width": 668.15625,
+      "height": 46,
+      "fontSize": 27
+    },
+    {
+      "name": "headline",
+      "left": 64,
+      "right": 732.15625,
+      "top": 247.5,
+      "bottom": 361.5,
+      "width": 668.15625,
+      "height": 114,
+      "fontSize": 50
+    },
+    {
+      "name": "support",
+      "left": 64,
+      "right": 732.15625,
+      "top": 379.5,
+      "bottom": 418.6875,
+      "width": 668.15625,
+      "height": 39.1875,
+      "fontSize": 28
+    },
+    {
+      "name": "trust",
+      "left": 64,
+      "right": 732.15625,
+      "top": 438.6875,
+      "bottom": 462.484375,
+      "width": 668.15625,
+      "height": 23.796875,
+      "fontSize": 17
+    }
+  ],
+  "product": {
+    "left": 772.15625,
+    "right": 1216,
+    "top": 80,
+    "bottom": 560,
+    "width": 443.84375,
+    "height": 480
+  },
+  "copyColumn": {
+    "left": 64,
+    "right": 732.15625,
+    "top": 177.5,
+    "bottom": 462.484375,
+    "width": 668.15625,
+    "height": 284.984375
+  }
+}

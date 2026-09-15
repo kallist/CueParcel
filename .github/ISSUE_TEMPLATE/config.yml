@@ -1,0 +1,10 @@
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/kallist/CueParcel/security/advisories/new
+    about: Report a security issue privately. Please do not open a public issue for vulnerabilities.
+  - name: Documentation
+    url: https://github.com/kallist/CueParcel/blob/main/docs/user-guide-v1.1.md
+    about: The user guide for CueParcel 1.1 — capture, Context Lens, Context Cart, recipes and output.
+  - name: Roadmap and planned work
+    url: https://github.com/kallist/CueParcel/blob/main/ROADMAP.md
+    about: What is planned, what is explicitly not planned, and how to propose something.
