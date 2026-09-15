@@ -127,10 +127,34 @@ CueParcel 让你可视化地挑选真正有用的内容、组合多个来源、�
 
 ## 快速开始
 
-CueParcel 目前还没有上架任何扩展商店。**Chrome 应用商店版本尚在计划中，还没有上架**，
-也还没有可下载的 release —— 第一个 release 正在准备。下面两种方式现在都能用。
+CueParcel 目前还没有上架 Chrome Web Store 或 Edge 扩展商店；**两个商店的发布都还在计划
+中，尚未上架**。不过，可直接加载的 Chromium 构建已经发布在 GitHub Releases 上：
+[`cueparcel-v1.1.0-chromium.zip`](https://github.com/kallist/CueParcel/releases/tag/v1.1.0)。
 
-### A. 自己构建并加载已解压扩展（现在就能用）
+你可以直接下载这个 release，也可以从源码自行构建 —— 下面两种方式都可用。
+
+### A. 下载 release 并加载已解压扩展
+
+从 [v1.1.0 release](https://github.com/kallist/CueParcel/releases/tag/v1.1.0) 下载
+**`cueparcel-v1.1.0-chromium.zip`** 并解压。这是手动安装：没有商店上架，也没有一键
+安装。
+
+然后：
+
+1. 打开 `chrome://extensions`（Edge 为 `edge://extensions`）。
+2. 打开右上角的 **开发者模式**。
+3. 点击 **加载已解压的扩展程序**，选择**解压出来的那个文件夹**。`manifest.json` 就在
+   压缩包的根目录，所以解压出来的文件夹本身就是扩展目录 —— 不要把浏览器指向它的
+   上一级目录。
+4. 固定 CueParcel：点击工具栏上的扩展（拼图）图标，再点 **CueParcel** 旁边的图钉。
+
+> 固定扩展必须由用户自己操作，扩展无法自己固定自己。当 CueParcel 检测到自己还没被
+> 固定时，会显示一张可关闭的简短引导卡片说明这一点；你关掉之后它就不会再打扰你。
+
+之后在任意页面点击 CueParcel 图标：自动开始捕获，并打开侧边栏。
+键盘替代方案：**`Alt+Shift+Y`**。
+
+### B. 从源码构建并加载已解压扩展
 
 前置条件：**Node.js 24**（见 `.nvmrc`）。
 
@@ -141,33 +165,16 @@ npm ci
 npm run build          # -> dist/
 ```
 
-然后：
+按上面第 1–4 步，用 **加载已解压的扩展程序** 选择 `dist/` 文件夹。
 
-1. 打开 `chrome://extensions`（Edge 为 `edge://extensions`）。
-2. 打开右上角的 **开发者模式**。
-3. 点击 **加载已解压的扩展程序**，选择刚生成的 `dist/` 文件夹。
-4. 固定 CueParcel：点击工具栏上的扩展（拼图）图标，再点 **CueParcel** 旁边的图钉。
-
-> 固定扩展必须由用户自己操作，扩展无法自己固定自己。当 CueParcel 检测到自己还没被
-> 固定时，会显示一张可关闭的简短引导卡片说明这一点；你关掉之后它就不会再打扰你。
-
-之后在任意页面点击 CueParcel 图标：自动开始捕获，并打开侧边栏。
-键盘替代方案：**`Alt+Shift+Y`**。
-
-### B. 使用 release 压缩包（等有了 release 之后）
-
-`npm run package:release` 会在仓库根目录生成可直接加载的压缩包：
+`npm run package:release` 可以在本地重新生成同一个压缩包：
 
 ```bash
 npm run package:release     # -> cueparcel-v1.1.0-chromium.zip + SHA256SUMS.txt
 ```
 
-解压后，按上面第 1–4 步用 **加载已解压的扩展程序** 选择**解压出来的那个文件夹**。
-`manifest.json` 就在压缩包的根目录，所以解压出来的文件夹本身就是扩展目录 ——
-不要把 Chrome 指向它的上一级目录。
-
-等第一个 GitHub Release 发布后，同一个压缩包会附在那里；在那之前请按上面的方式自己
-构建。发布流程记录在 [docs/launch/RELEASE.md](docs/launch/RELEASE.md)。
+已发布构建的校验和列在该 release 的 `SHA256SUMS.txt` 中。发布流程记录在
+[docs/launch/RELEASE.md](docs/launch/RELEASE.md)。
 
 ## 它能理解什么
 
