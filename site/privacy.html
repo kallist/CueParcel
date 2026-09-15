@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CueParcel — Privacy Policy</title>
+<meta name="description" content="How the CueParcel extension handles data: webpage content is accessed only when you ask, processed locally in your browser, stored for the session only, and never transmitted.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="assets/cueparcel-mark-dark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <span class="lockup">
+      <img src="assets/cueparcel-mark-dark.svg" alt="" width="26" height="26" aria-hidden="true">
+      CueParcel
+    </span>
+    <p class="muted-soft header-meta">Privacy Policy · Version 1.1.0</p>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero wrap">
+    <h1>Privacy Policy</h1>
+    <p class="tagline">CueParcel reads the page you ask it to read, works on it inside your browser, and copies the result for you.</p>
+    <p class="one-liner">Nothing CueParcel processes is sent anywhere by CueParcel. There is no server, no account, no analytics and no telemetry, and captured page content is not kept after your browser session ends.</p>
+    <p class="muted-soft">Applies to the CueParcel browser extension, version 1.1.0. Last updated 14 February 2026.</p>
+    <p class="muted-soft">This page is the canonical public privacy policy. It is published from <code>site/privacy.html</code> in the CueParcel repository, and it describes what the extension's code actually does.</p>
+  </section>
+
+  <section class="section" id="short-version">
+    <div class="wrap">
+      <h2>The short version</h2>
+      <p class="section-lede">CueParcel accesses webpage content at your request. It does <strong>not collect</strong> it: nothing is received by the developer, stored off your device, or shared with anyone.</p>
+      <ul class="trust-line">
+        <li>No backend</li>
+        <li>No telemetry</li>
+        <li>No analytics</li>
+        <li>No account or API key</li>
+        <li>Session-only capture storage</li>
+        <li>No host permissions</li>
+      </ul>
+      <p>CueParcel is not a chatbot, a summariser, or an agent runner. It does not call an AI model, does not generate answers, and does not require an API key. It prepares and copies context; you decide where that context goes.</p>
+    </div>
+  </section>
+
+  <section class="section" id="access">
+    <div class="wrap">
+      <h2>What is accessed, and when</h2>
+      <p class="section-lede">Access happens only after an explicit action by you. There is no background capture, no scheduled capture, no always-on page access, and no capture of any tab you did not activate.</p>
+      <ul>
+        <li><strong>You click the CueParcel toolbar icon</strong> (or press the <code>Alt+Shift+Y</code> shortcut) while a page is focused. The content of <strong>that active tab only</strong> is read. That click is also what grants the <code>activeTab</code> permission for that page.</li>
+        <li><strong>You use Context Lens</strong> on an already-captured page. The visible regions of that same page are outlined so you can click the sections to include.</li>
+        <li><strong>You select text</strong> on the page and add it. Only the text you selected is used.</li>
+      </ul>
+      <p>Nothing is read at any other time. CueParcel cannot read a page you have not activated, and it does not enumerate, list, or visit your tabs or your browsing history.</p>
+      <p>What is extracted is a structured document: title, headings, paragraphs, lists, code blocks, tables, quotes and link targets. Specialised adapters recognise GitHub issues, GitHub pull requests and technical documentation pages; everything else goes through a generic article extraction. The page's raw HTML is not kept as a stored artefact — what is kept is the derived, structured representation.</p>
+    </div>
+  </section>
+
+  <section class="section" id="processing">
+    <div class="wrap">
+      <h2>Where that data is processed</h2>
+      <p class="section-lede">Entirely locally, inside your browser, inside the extension.</p>
+      <ul>
+        <li>There is <strong>no CueParcel backend, server, or API</strong>. No CueParcel-operated system receives anything, because no such system exists.</li>
+        <li>The extension makes <strong>no network requests of its own</strong>. The published audit found no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, <code>sendBeacon</code> or dynamic import anywhere in the extension's source or its shipped bundle. The only <code>http</code> strings in the shipped package are SVG XML namespace declarations.</li>
+        <li>Extraction, cleaning, Markdown and JSON serialisation, size estimation and receipt generation all run as ordinary in-browser code.</li>
+        <li>The extension does <strong>not contact an AI provider</strong>. If you paste the result into an AI tool later, that is your action, under that tool's own privacy policy.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="leaving">
+    <div class="wrap">
+      <h2>Does captured content leave the browser?</h2>
+      <p class="section-lede">Not by CueParcel. Never. CueParcel does not transmit, upload, sync or report your content, and there is no channel in the code for it to do so.</p>
+      <p>Three ways content moves, all of them deliberate and all of them yours:</p>
+      <ol class="steps">
+        <li>
+          <h3>Copy</h3>
+          <p>When you press Copy, the packaged text is written to your system clipboard. From that moment it is in your clipboard, under your control and your operating system's rules. CueParcel never reads your clipboard.</p>
+        </li>
+        <li>
+          <h3>Download</h3>
+          <p>When you press Download, the text is saved to a local file through an object URL created in the page. CueParcel does not request the <code>downloads</code> permission and does not track what you saved.</p>
+        </li>
+        <li>
+          <h3>Your subsequent paste</h3>
+          <p>If you paste the copied text into another application — an AI assistant, an editor, a ticket — the content goes wherever that application sends it. That transfer is not performed by CueParcel and is governed by that application's privacy policy, not this one.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="storage">
+    <div class="wrap">
+      <h2>Storage</h2>
+      <p class="section-lede">This is the complete list of what CueParcel writes, and where.</p>
+      <div class="install">
+        <div class="install-column">
+          <h3>For the current browser session only</h3>
+          <p>Written to <code>chrome.storage.session</code>, cleared when you close the browser:</p>
+          <ul>
+            <li>Your captured document for a window — the derived, structured content shown in the panel. At most <strong>one captured document per browser window</strong> is cached.</li>
+            <li>Capture bookkeeping: capture id, tab id, URL, title, capture time and status.</li>
+            <li>Your <strong>Context Cart</strong> — the sources you collected for the current task, one entry per browser window.</li>
+          </ul>
+        </div>
+        <div class="install-column">
+          <h3>Kept until you remove it</h3>
+          <p>Written to <code>chrome.storage.local</code>:</p>
+          <ul>
+            <li><strong>One boolean</strong> recording that you dismissed the "pin CueParcel" onboarding card, under the key <code>page2agent.onboarding.pinDismissed.v1</code>. It contains no page content. It is removed when you uninstall CueParcel or clear its extension data.</li>
+          </ul>
+        </div>
+      </div>
+      <p>That is the whole list. In particular:</p>
+      <ul>
+        <li><strong>Captured page content is never written to <code>chrome.storage.local</code>.</strong> It is not persisted to disk as part of normal use.</li>
+        <li>There is <strong>no cloud sync</strong>, no remote backup, and no export history.</li>
+        <li>There is <strong>no log of pages you visited</strong>, and no record of which sites you used CueParcel on.</li>
+        <li>The only durable value the extension stores is a single UI preference boolean containing no page content.</li>
+      </ul>
+      <p>If you uninstall the extension, the browser removes both stores. If you want the session data gone sooner, close the browser (which clears <code>chrome.storage.session</code>) or clear the extension's data from your browser's extension settings.</p>
+    </div>
+  </section>
+
+  <section class="section" id="clipboard">
+    <div class="wrap">
+      <h2>Clipboard and export behaviour</h2>
+      <ul>
+        <li><strong>Copy</strong> writes the packaged context to the system clipboard, and only when you press the button. CueParcel never reads the clipboard and is not a clipboard manager.</li>
+        <li><strong>Download</strong> saves the packaged context as a local file (Markdown or TaskSpec JSON) using a browser-generated object URL, which is revoked immediately after the download starts.</li>
+        <li>Neither action sends anything over the network.</li>
+      </ul>
+      <p>What happens to the copied or downloaded text after that point is outside CueParcel's control and outside this policy.</p>
+    </div>
+  </section>
+
+  <section class="section" id="telemetry">
+    <div class="wrap">
+      <h2>Telemetry, analytics and tracking</h2>
+      <p class="section-lede">None. The extension has no mechanism to measure you, so nothing about your use of it is measured.</p>
+      <ul>
+        <li>No analytics service or SDK.</li>
+        <li>No telemetry and no crash reporting.</li>
+        <li>No advertising or tracking code.</li>
+        <li>No usage counters, feature flags or A/B testing.</li>
+        <li>No unique identifier of any kind — no installation id, no device id, no advertising id.</li>
+        <li>No cookies: the extension does not request the <code>cookies</code> permission, does not read document cookies, and does not set any.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="third-parties">
+    <div class="wrap">
+      <h2>Backend, third parties and data sales</h2>
+      <ul>
+        <li><strong>Backend: none.</strong> There is no server component to this product, hosted or self-hosted.</li>
+        <li><strong>Third-party sharing: none.</strong> No data is sold, rented, traded, disclosed or transferred to any third party, because no data reaches the developer or any service operated on the developer's behalf.</li>
+        <li><strong>Sale of data: none.</strong> Your data is not a product here, and nothing is monetised through it.</li>
+        <li><strong>Third-party code.</strong> The extension bundles open-source runtime libraries — React and <code>@mozilla/readability</code> — at build time. They are compiled into the submitted package, run locally, make no network requests, and being bundled means there is no remotely loaded code of any kind.</li>
+        <li><strong>No affiliation.</strong> CueParcel is an independent open-source project. It is not affiliated with, endorsed by, or acting on behalf of any AI provider, browser vendor or hosting service.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="retention">
+    <div class="wrap">
+      <h2>Retention</h2>
+      <ul>
+        <li><strong>Captured page content, capture bookkeeping and the Context Cart:</strong> browser session only — gone when the browser closes.</li>
+        <li><strong>The onboarding dismissal boolean:</strong> until you uninstall the extension or clear its data.</li>
+        <li><strong>Anything on a server:</strong> nothing, because no server exists.</li>
+        <li><strong>Backups, archives and analytics history:</strong> none exist.</li>
+      </ul>
+      <p>The developer holds no copy of your content at any point, so there is nothing for the developer to retain, delete or disclose on request.</p>
+    </div>
+  </section>
+
+  <section class="section" id="permissions">
+    <div class="wrap">
+      <h2>Permissions, and why each one is needed</h2>
+      <p class="section-lede">CueParcel requests exactly four permissions. It requests <strong>no host permissions</strong>: the submitted manifest has no <code>host_permissions</code> key, so the extension cannot read any site until you activate it on that site.</p>
+      <ul class="permissions">
+        <li><code>activeTab</code> — read the current page only after you click the toolbar icon or press the shortcut. This is what makes capture possible without broad site access.</li>
+        <li><code>scripting</code> — inject CueParcel's own packaged content script into the page you activated, which performs extraction and draws the Context Lens selection overlay.</li>
+        <li><code>sidePanel</code> — show CueParcel's interface in the browser's Side Panel beside the page, so your source stays visible while you work.</li>
+        <li><code>storage</code> — keep the capture and the Context Cart for the current browser session, so a page navigation or a service-worker restart does not lose your work.</li>
+      </ul>
+      <p>CueParcel does <strong>not</strong> request and does not use <code>&lt;all_urls&gt;</code>, <code>tabs</code>, <code>cookies</code>, <code>history</code>, <code>bookmarks</code>, <code>webRequest</code>, <code>downloads</code>, <code>nativeMessaging</code>, or clipboard read access.</p>
+      <p>It does not run code fetched from the internet: no remote code, no remote JavaScript, no <code>eval</code>, no <code>new Function</code>, and no dynamically loaded script. The extension's content security policy is <code>script-src 'self'; object-src 'self';</code>, which blocks remotely hosted scripts.</p>
+    </div>
+  </section>
+
+  <section class="section" id="security">
+    <div class="wrap">
+      <h2>Security posture</h2>
+      <ul>
+        <li><strong>Page content is treated as untrusted input.</strong> CueParcel separates source content from CueParcel-generated instructions in its data model and in every output, so instructions that happen to appear inside a webpage cannot be presented as if CueParcel wrote them.</li>
+        <li>Un-sanitised page HTML is never injected into the extension's privileged panel.</li>
+        <li>Data crossing between the page, the extension's service worker and the panel is validated before use rather than trusted by type.</li>
+      </ul>
+      <p class="muted-soft">This describes how the product is built. It is not a security certification, and CueParcel has not undergone a formal third-party security audit.</p>
+    </div>
+  </section>
+
+  <section class="section" id="children">
+    <div class="wrap">
+      <h2>Children</h2>
+      <p>CueParcel is a general-purpose productivity tool. It is not directed at children, does not knowingly collect information from anyone, and has no account, profile or communication feature.</p>
+    </div>
+  </section>
+
+  <section class="section" id="your-control">
+    <div class="wrap">
+      <h2>Your choices and control</h2>
+      <ul>
+        <li><strong>Do not activate it.</strong> If you never click the icon, CueParcel never reads a page.</li>
+        <li><strong>Capture only what you want.</strong> Context Lens exists so you can include the sections you mean and leave everything else out.</li>
+        <li><strong>Inspect before you copy.</strong> The Context Receipt lists what is in the package and what is not.</li>
+        <li><strong>Close the browser</strong> to clear all session-stored capture data, or clear the extension's data to remove the stored preference.</li>
+        <li><strong>Uninstall</strong> to remove everything CueParcel ever stored locally.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="changes">
+    <div class="wrap">
+      <h2>Changes to this policy</h2>
+      <p>If a future version of CueParcel changes what it accesses, stores or transmits, this policy will be updated before that version is released, the "Last updated" date above will change, and the change will be visible in this repository's history. CueParcel's principle is that the policy describes the code; if the code changes, the policy changes with it.</p>
+    </div>
+  </section>
+
+  <section class="section" id="verify">
+    <div class="wrap">
+      <h2>Verifying this policy</h2>
+      <p class="section-lede">Every claim here is checkable. This is the audit it rests on; the full version is published in the repository at <code>docs/store/edge/AUDIT.md</code>.</p>
+      <ul>
+        <li><strong>Access requires an explicit user action</strong> — the extension's only capture path begins at the toolbar click handler.</li>
+        <li><strong>No network requests</strong> — no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, <code>sendBeacon</code> or dynamic import exists in the extension source or its shipped bundle.</li>
+        <li><strong>No remote code</strong> — no <code>eval</code>, no <code>new Function</code>, no remotely loaded script; the content security policy is <code>script-src 'self'</code>.</li>
+        <li><strong>No analytics or telemetry</strong> — no analytics dependency and no reporting code path.</li>
+        <li><strong>Session-scoped capture storage</strong> — captured content is written to <code>chrome.storage.session</code> only.</li>
+        <li><strong>Exactly one durable local value</strong> — the boolean key <code>page2agent.onboarding.pinDismissed.v1</code> in <code>chrome.storage.local</code>.</li>
+        <li><strong>Four permissions, no host permissions</strong> — stated verbatim in the submitted <code>manifest.json</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="contact">
+    <div class="wrap">
+      <h2>Contact</h2>
+      <p>Questions, corrections, or a challenge to any claim on this page:</p>
+      <ul>
+        <li>Issue tracker: <a href="https://github.com/kallist/CueParcel/issues">github.com/kallist/CueParcel/issues</a></li>
+        <li>Repository: <a href="https://github.com/kallist/CueParcel">github.com/kallist/CueParcel</a></li>
+      </ul>
+      <p class="muted-soft">CueParcel is an independent open-source project, MIT licensed.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <h2>CueParcel is open source</h2>
+    <p>Source, issues and releases live on GitHub. Version 1.1.0 · MIT licensed.</p>
+    <div class="actions">
+      <a class="button" href="./">Back to the CueParcel overview</a>
+      <a class="button button-secondary" href="https://github.com/kallist/CueParcel/issues">Report an issue</a>
+    </div>
+    <p class="muted-soft">This page is a static HTML file with no analytics and no external requests. It is the privacy policy referenced by the CueParcel extension listing.</p>
+  </div>
+</footer>
+
+</body>
+</html>
