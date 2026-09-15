@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Page2Agent Side Panel — V1.1 Visual Context Workbench
+   CueParcel Side Panel — V1.1 Visual Context Workbench
    Design language: "premium graphite" — deep neutral surfaces, a restrained
    blue → violet → cyan accent ramp, one soft aurora wash behind the header,
    and functional micro-motion that always expresses state.
@@ -314,6 +314,24 @@ ol {
   letter-spacing: -0.02em;
 }
 
+/* CueParcel mark + wordmark. The adjacent <h1> supplies the accessible name,
+   so the mark itself is aria-hidden and never contributes a second label. */
+.brand-lockup {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.brand-mark {
+  flex: none;
+  /* The C takes the theme's text colour; the cue dot keeps the brand accent. */
+  color: var(--text);
+  display: block;
+}
+
 .panel-version {
   position: relative;
   z-index: 1;
@@ -322,6 +340,19 @@ ol {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* Onboarding brand lockup: mark + product name, then the brand line. */
+.onboarding-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.onboarding-sub {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 /* Soft aurora wash sitting directly behind the header content. */

@@ -1,9 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "Page2Agent",
+  "name": "CueParcel",
   "version": "1.1.0",
-  "description": "Turn web pages into structured, source-grounded context and tasks for AI agents.",
-  "action": {},
+  "description": "Collect what matters from the web and turn it into structured, source-grounded context for AI.",
+  "action": {
+    "default_title": "CueParcel",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
   "background": {
     "service_worker": "assets/service-worker.js",
     "type": "module"
@@ -12,12 +20,18 @@
     "default_path": "sidepanel.html"
   },
   "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "commands": {
     "_execute_action": {
       "suggested_key": {
         "default": "Alt+Shift+Y"
       },
-      "description": "Capture the current page with Page2Agent"
+      "description": "Capture the current page with CueParcel"
     }
   },
   "content_security_policy": {

@@ -111,9 +111,12 @@ test.beforeAll(async () => {
     }
   });
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-  // Exact match: the onboarding heading ("Welcome to Page2Agent") must never
-  // make this locator ambiguous.
-  await expect(panel.getByRole("heading", { name: "Page2Agent", exact: true })).toBeVisible();
+  // The brand name legitimately appears twice (panel header h1 + onboarding h2),
+  // so pin the level-1 header heading rather than a bare name match. The panel
+  // <header> is nested inside <main>, so it does not map to the banner role.
+  await expect(
+    panel.getByRole("heading", { level: 1, name: "CueParcel", exact: true }),
+  ).toBeVisible();
 });
 
 test.afterAll(async () => {
@@ -166,7 +169,7 @@ async function waitForCapturedTitle(title: string): Promise<void> {
 }
 
 async function waitForAgentReady(): Promise<void> {
-  await expect(panel.getByText(/# Page2Agent Task/)).toBeVisible();
+  await expect(panel.getByText(/# CueParcel Task/)).toBeVisible();
 }
 
 async function openTaskSpecTab(): Promise<void> {

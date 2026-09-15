@@ -137,7 +137,7 @@ function makeToolbar(overrides: Partial<ToolbarDeps> = {}) {
   return { deps, syncs, record };
 }
 
-describe("Page2Agent V1.1 side panel", () => {
+describe("CueParcel V1.1 side panel", () => {
   afterEach(() => {
     cleanup();
   });
@@ -155,7 +155,7 @@ describe("Page2Agent V1.1 side panel", () => {
     expect(await screen.findByText("Example Article")).toBeTruthy();
     expect(screen.getByText("Web Page")).toBeTruthy();
     await waitFor(() => {
-      expect(screen.getByText("# Page2Agent Task", { exact: false })).toBeTruthy();
+      expect(screen.getByText("# CueParcel Task", { exact: false })).toBeTruthy();
     });
     expect(screen.getByRole("tab", { name: "TaskSpec" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Learn/ })).toBeTruthy();
@@ -357,10 +357,23 @@ describe("Page2Agent V1.1 side panel", () => {
   });
 });
 
-describe("Page2Agent V1.1 toolbar access UX", () => {
+describe("CueParcel V1.1 toolbar access UX", () => {
   afterEach(() => {
     cleanup();
   });
+
+  /**
+   * The brand name legitimately appears in the always-present panel header as
+   * well as in the onboarding card, so onboarding assertions are scoped to the
+   * "Getting started" region instead of searching the whole document.
+   */
+  function onboardingRegion(): HTMLElement | null {
+    return screen.queryByRole("region", { name: "Getting started" });
+  }
+  function onboardingHeading(): HTMLElement | null {
+    const region = onboardingRegion();
+    return region === null ? null : within(region).queryByRole("heading", { name: "CueParcel" });
+  }
 
   it("shows the pin onboarding only when the extension is not pinned", async () => {
     const storage = makeStorage();
@@ -369,8 +382,10 @@ describe("Page2Agent V1.1 toolbar access UX", () => {
     });
     renderApp({ storage, toolbar: toolbar.deps });
 
-    expect(await screen.findByText("Welcome to Page2Agent")).toBeTruthy();
-    expect(screen.getByText("Pin Page2Agent")).toBeTruthy();
+    await waitFor(() => expect(onboardingRegion()).not.toBeNull());
+    expect(onboardingHeading()).not.toBeNull();
+    expect(onboardingRegion()?.textContent).toContain("A quieter way to collect what matters.");
+    expect(screen.getByText("Pin CueParcel")).toBeTruthy();
     // The copy must not promise something Chrome does not allow.
     expect(screen.getByText(/Extensions menu/)).toBeTruthy();
     expect(screen.queryByText(/pins itself|automatically pins/i)).toBeNull();
@@ -382,8 +397,10 @@ describe("Page2Agent V1.1 toolbar access UX", () => {
     renderApp({ storage, toolbar: toolbar.deps });
 
     await waitFor(() => expect(toolbar.record.decisions).toBeGreaterThan(0));
-    expect(screen.queryByText("Welcome to Page2Agent")).toBeNull();
+    expect(onboardingRegion()).toBeNull();
     expect(screen.queryByText(/Extensions menu/)).toBeNull();
+    // The header still brands the panel, even with no onboarding card.
+    expect(screen.getByRole("heading", { name: "CueParcel" })).toBeTruthy();
   });
 
   it("dismisses onboarding and switches to the quiet hint", async () => {
@@ -393,11 +410,11 @@ describe("Page2Agent V1.1 toolbar access UX", () => {
     });
     renderApp({ storage, toolbar: toolbar.deps });
 
-    await screen.findByText("Welcome to Page2Agent");
+    await waitFor(() => expect(onboardingRegion()).not.toBeNull());
     await userEvent.click(screen.getByRole("button", { name: /Got it/i }));
 
     expect(toolbar.record.dismissed).toBe(1);
-    await waitFor(() => expect(screen.queryByText("Welcome to Page2Agent")).toBeNull());
+    await waitFor(() => expect(onboardingRegion()).toBeNull());
     expect(screen.getByText(/Extensions menu/)).toBeTruthy();
   });
 

@@ -1,7 +1,7 @@
 /**
  * Pin-to-toolbar onboarding (V1.1).
  *
- * Page2Agent's only entry point is the toolbar action, and a Chrome extension
+ * CueParcel's only entry point is the toolbar action, and a Chrome extension
  * cannot pin itself: pinning is an explicit user decision in the browser's
  * Extensions UI. So the honest product behaviour is to detect the unpinned
  * state and tell the user exactly where the pin lives — never to claim we can
@@ -93,8 +93,8 @@ export async function dismissOnboarding(storage: OnboardingStorage): Promise<voi
 /** Truthful, static copy — the extension genuinely cannot pin itself. */
 export const ONBOARDING_STEPS = [
   {
-    title: "Pin Page2Agent",
-    detail: "Open Chrome's Extensions menu (puzzle icon) and pin Page2Agent for one-click access.",
+    title: "Pin CueParcel",
+    detail: "Open Chrome's Extensions menu (puzzle icon) and pin CueParcel for one-click access.",
   },
   {
     title: "Pick Context",
@@ -107,7 +107,14 @@ export const ONBOARDING_STEPS = [
 ] as const;
 
 export const PIN_HINT_TEXT =
-  "Pin Page2Agent from Chrome's Extensions menu for one-click access.";
+  "Pin CueParcel from Chrome's Extensions menu for one-click access.";
+
+/**
+ * The approved brand line. Used as the single voice moment in the UI; every
+ * other string stays functional so brand poetry never obscures how to use the
+ * product.
+ */
+export const BRAND_TAGLINE = "A quieter way to collect what matters.";
 
 /**
  * Keyboard shortcut hint; the manifest registers the real binding.

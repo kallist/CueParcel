@@ -47,7 +47,7 @@ const RESULT: CaptureResult = {
   actionKind: "use_as_context",
   stats: { characters: 5, codeBlocks: 0, links: 0 },
   markdown: "# Example",
-  agentContext: "# Page2Agent Context",
+  agentContext: "# CueParcel Context",
   filename: "example.md",
 };
 

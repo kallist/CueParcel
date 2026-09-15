@@ -5,7 +5,7 @@ import "./styles.css";
 
 const rootElement = document.getElementById("root");
 if (rootElement === null) {
-  throw new Error("Page2Agent: #root element missing in sidepanel.html");
+  throw new Error("CueParcel: #root element missing in sidepanel.html");
 }
 
 createRoot(rootElement).render(

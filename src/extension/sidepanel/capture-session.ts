@@ -34,7 +34,7 @@ export interface CaptureSessionController {
 }
 
 export const INTERRUPTED_CAPTURE_MESSAGE =
-  "Previous capture was interrupted. Click the Page2Agent toolbar icon to try again.";
+  "Previous capture was interrupted. Click the CueParcel toolbar icon to try again.";
 
 export function useCaptureSession(deps: CaptureSessionDeps): CaptureSessionController {
   const [view, setView] = useState<CaptureViewState>({ status: "idle" });

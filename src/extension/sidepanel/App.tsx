@@ -1,5 +1,5 @@
 /**
- * Page2Agent Side Panel — V1.1 Visual Context Workbench.
+ * CueParcel Side Panel — V1.1 Visual Context Workbench.
  *
  * Layout (top to bottom):
  *   header → capture state (idle/capturing/error) OR captured workbench:
@@ -49,7 +49,7 @@ import {
   createProductionToolbarDeps,
 } from "./workbench-ui/toolbar-deps";
 import type { ToolbarDeps } from "./workbench-ui/toolbar-deps";
-import { ONBOARDING_STEPS, PIN_HINT_TEXT, SHORTCUT_HINT } from "./onboarding";
+import { BRAND_TAGLINE, ONBOARDING_STEPS, PIN_HINT_TEXT, SHORTCUT_HINT } from "./onboarding";
 import type { OnboardingDecision } from "./onboarding";
 import type { CaptureResult } from "../capture/capture-result";
 
@@ -91,7 +91,10 @@ export default function App({
     <main className="panel">
       <header className="panel-header">
         <Aurora />
-        <h1>Page2Agent</h1>
+        <div className="brand-lockup">
+          <BrandMark />
+          <h1>CueParcel</h1>
+        </div>
         <span className="panel-version">Visual Context Workbench</span>
       </header>
 
@@ -108,6 +111,47 @@ export default function App({
         />
       )}
     </main>
+  );
+}
+
+/**
+ * CueParcel brand mark — the open "C" with the Cue Blue cue dot.
+ *
+ * Inline vector rather than an <img>: the mark is two shapes of pure geometry,
+ * so inlining keeps it crisp at any size, lets the C follow the theme through
+ * `currentColor`, and keeps the Cue Blue dot the single accent.
+ *
+ * The geometry mirrors public/brand/cueparcel-mark.svg exactly (32x32 viewBox,
+ * 3.456 stroke, 80 degree opening, cue dot in the open mouth). Those numbers are
+ * MEASURED from the approved brand board rather than invented: the dot is ~30% of
+ * the C's height and its centre sits 0.77 of the C's outer radius to the right, so
+ * it reads as a distinct cue beside the opening instead of a small dot lost inside
+ * the cavity. A unit test pins this markup to the committed master, so the header
+ * can never drift from the exported asset.
+ *
+ * The C's body is TWO arc commands on purpose: an SVG arc cannot span more than
+ * 180 degrees, and a single large-arc command silently renders the 80 degree
+ * COMPLEMENT, which collapses the C into two stub ends. Keep the split.
+ *
+ * Accessibility: the adjacent visible "CueParcel" heading is the accessible
+ * name, so this is aria-hidden and must never add a second label.
+ */
+function BrandMark() {
+  return (
+    <svg
+      className="brand-mark"
+      viewBox="0 0 32 32"
+      width="22"
+      height="22"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M 26.865 6.44 A 14.872 14.872 0 0 0 0.6 16 A 14.872 14.872 0 0 0 26.865 25.56 L 24.217 23.338 A 11.416 11.416 0 0 1 4.056 16 A 11.416 11.416 0 0 1 24.217 8.662 Z"
+        fill="currentColor"
+      />
+      <circle cx="26.941" cy="16" r="4.459" fill="#224AE6" />
+    </svg>
   );
 }
 
@@ -140,8 +184,10 @@ function PinOnboarding({ toolbar }: { toolbar: ToolbarDeps }) {
 
   if (decision.showPinHint) {
     return (
+      // No decorative glyph here: a "✦" sparkle sat in front of this hint and
+      // read as a tiny particle mark next to the brand, which the approved logo
+      // deliberately does not have.
       <p className="pin-hint" role="note">
-        <span aria-hidden="true">✦</span>
         {PIN_HINT_TEXT}
       </p>
     );
@@ -155,9 +201,14 @@ function PinOnboarding({ toolbar }: { toolbar: ToolbarDeps }) {
   return (
     <section className="onboarding" aria-label="Getting started">
       <ParticleAtmosphere />
-      <h2>Welcome to Page2Agent</h2>
-      <p className="onboarding-lead">
-        Turn the web into context your agents can actually use.
+      <div className="onboarding-brand">
+        <BrandMark />
+        <h2>CueParcel</h2>
+      </div>
+      <p className="onboarding-lead">{BRAND_TAGLINE}</p>
+      <p className="onboarding-sub">
+        Capture a page, pick what matters, combine sources, and prepare structured
+        context for AI.
       </p>
       <ol className="onboarding-steps">
         {ONBOARDING_STEPS.map((step) => (
@@ -189,9 +240,9 @@ function IdleView() {
         </svg>
       </div>
       <h2>No page captured yet</h2>
-      <p>Click the Page2Agent toolbar icon on the page you want to understand.</p>
+      <p>Click the CueParcel toolbar icon on the page you want to understand.</p>
       <ol className="steps">
-        <li><strong>Capture</strong> — Page2Agent identifies the page type</li>
+        <li><strong>Capture</strong> — CueParcel identifies the page type</li>
         <li><strong>Pick</strong> — choose sections with Context Lens</li>
         <li><strong>Combine</strong> — add pages to the Context Cart</li>
         <li><strong>Task</strong> — pick what your agent should do</li>
@@ -215,7 +266,7 @@ function ErrorView({ message }: { message: string }) {
     <section className="status-panel" aria-live="polite">
       <div className="status-mark status-mark-error" aria-hidden="true">!</div>
       <p className="error-text">{message}</p>
-      <p className="muted">Click the Page2Agent toolbar icon to try again.</p>
+      <p className="muted">Click the CueParcel toolbar icon to try again.</p>
     </section>
   );
 }
@@ -701,7 +752,7 @@ function PreviewTabs({
     if (content === null) {
       return;
     }
-    const slug = filenameBase || "page2agent";
+    const slug = filenameBase || "cueparcel";
     if (activeTab === "taskspec") {
       const spec = JSON.parse(outputs.taskSpecJson!) as TaskSpec;
       downloadJson(buildTaskSpecFilename(spec), content);

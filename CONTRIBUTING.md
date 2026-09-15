@@ -1,4 +1,4 @@
-# Contributing to Page2Agent
+# Contributing to CueParcel
 
 Thanks for contributing! This document covers how to set up the project,
 verify changes, and add new extraction adapters.
@@ -83,5 +83,5 @@ PageExtractor → NormalizedDocument
 - Never execute remote code or `eval`; messages crossing extension contexts
   are validated from `unknown`.
 - Secrets never belong in code, fixtures, snapshots, or logs.
-- New permissions require justification and an ADR note; Page2Agent stays
+- New permissions require justification and an ADR note; CueParcel stays
   least-privilege (no `<all_urls>`, no `tabs`, no `downloads`).

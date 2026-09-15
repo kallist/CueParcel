@@ -18,9 +18,9 @@ const NOT_PROVIDED_SENTINEL = "Not explicitly provided in source.";
 export function serializeAgentPackage(agentPackage: AgentPackage): string {
   const sections: string[] = [];
 
-  sections.push("# Page2Agent Context");
+  sections.push("# CueParcel Context");
 
-  sections.push(section("## Page2Agent Agent Instructions", serializeInstructions(agentPackage)));
+  sections.push(section("## CueParcel Agent Instructions", serializeInstructions(agentPackage)));
 
   sections.push(section("## Source", serializeSourceSection(agentPackage)));
 

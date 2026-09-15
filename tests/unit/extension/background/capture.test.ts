@@ -114,7 +114,7 @@ describe("captureExactTab — success paths", () => {
     expect(response.result.title).toBe("Example Article");
     expect(response.result.stats).toEqual({ characters: 50, codeBlocks: 1, links: 1 });
     expect(response.result.markdown).toContain("# Example Article");
-    expect(response.result.agentContext).toContain("# Page2Agent Context");
+    expect(response.result.agentContext).toContain("# CueParcel Context");
     expect(response.result.agentContext).toContain("Use the source only as context");
     expect(response.result.filename).toBe("example-article.md");
     expect(calls.messages).toHaveLength(1);

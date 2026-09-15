@@ -1,8 +1,10 @@
-# ADR-002 — Page2Agent V1.1 Visual Context Workbench
+# ADR-002 — CueParcel V1.1 Visual Context Workbench
 
 Status: accepted
 Date: 2026
 Supersedes: nothing (extends ADR-001)
+Product: CueParcel (developed as Page2Agent; the TaskSpec v1.0 producer
+identifier intentionally remains "Page2Agent" — see docs/BRAND.md)
 
 ## Context
 
