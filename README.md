@@ -140,26 +140,27 @@ Each row below compares the same three approaches.
 
 ## Quick Start
 
-CueParcel is not on any extension store yet. **Chrome Web Store publication is
-planned, not shipped**, and there is no downloadable release yet either — the
-first release is being prepared. Both routes below work today.
+CueParcel is not on any extension store yet. **Chrome Web Store and Edge Add-ons
+publication are planned, not shipped.** Separately, a ready-to-install Chromium
+build is already published on GitHub Releases:
+[`cueparcel-v1.1.0-chromium.zip`](https://github.com/kallist/CueParcel/releases/tag/v1.1.0).
 
-### A. Build it and load it unpacked (works today)
+Download that release build, or build CueParcel locally — both routes are below.
 
-Prerequisites: **Node.js 24** (see `.nvmrc`).
+### A. Download the release and load it unpacked
 
-```bash
-git clone https://github.com/kallist/CueParcel.git
-cd CueParcel
-npm ci
-npm run build          # -> dist/
-```
+Download **`cueparcel-v1.1.0-chromium.zip`** from the
+[v1.1.0 release](https://github.com/kallist/CueParcel/releases/tag/v1.1.0) and
+unzip it. This is a manual install: there is no store listing and no one-click
+install.
 
 Then:
 
 1. Open `chrome://extensions` — on Edge, `edge://extensions`.
 2. Turn on **Developer mode** (top right).
-3. Click **Load unpacked** and select the `dist/` folder you just built.
+3. Click **Load unpacked** and select the **unzipped folder**. `manifest.json` is
+   at the archive root, so the unzipped folder itself is the extension folder —
+   do not point the browser at a parent directory.
 4. Pin CueParcel: click the Extensions (puzzle-piece) icon in the toolbar, then
    the pin next to **CueParcel**.
 
@@ -170,21 +171,28 @@ Then:
 Then click the CueParcel icon on any page: capture runs and the Side Panel opens.
 Keyboard alternative: **`Alt+Shift+Y`**.
 
-### B. From a release ZIP (once a release exists)
+### B. Build it from source and load it unpacked
 
-`npm run package:release` produces a loadable archive at the repository root:
+Prerequisites: **Node.js 24** (see `.nvmrc`).
+
+```bash
+git clone https://github.com/kallist/CueParcel.git
+cd CueParcel
+npm ci
+npm run build          # -> dist/
+```
+
+Load the `dist/` folder with **Load unpacked** exactly as in steps 1–4 above.
+
+`npm run package:release` reproduces the same archive locally at the repository
+root:
 
 ```bash
 npm run package:release     # -> cueparcel-v1.1.0-chromium.zip + SHA256SUMS.txt
 ```
 
-Unzip it and load the **unzipped folder** with **Load unpacked** as in steps 1–4
-above. `manifest.json` is at the archive root, so the unzipped folder is the
-extension folder — do not point Chrome at a parent directory.
-
-When the first GitHub Release is published, the same ZIP will be attached there;
-until then, build it as above. Release mechanics are documented in
-[docs/launch/RELEASE.md](docs/launch/RELEASE.md).
+The published build's checksum is listed in its release `SHA256SUMS.txt`. Release
+mechanics are documented in [docs/launch/RELEASE.md](docs/launch/RELEASE.md).
 
 ## What it understands
 
