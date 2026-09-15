@@ -19,12 +19,18 @@
  */
 import { createHash } from "node:crypto";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const DIST = join(root, "dist");
+/**
+ * `dist/` and the output directory are overridable so the packaging guards can be
+ * exercised against a temporary tree in tests, without touching the real build
+ * output. Everything else stays relative to the repository root.
+ */
+const DIST = process.env.CUEPARCEL_DIST_DIR ?? join(root, "dist");
+const OUT_DIR = process.env.CUEPARCEL_OUT_DIR ?? root;
 const MANIFEST = join(DIST, "manifest.json");
 
 /** Files that must never end up in a release artifact. */
@@ -149,6 +155,7 @@ async function collect(dir, base = dir) {
 /* ------------------------------------------------------------------ main -- */
 
 const manifest = JSON.parse(await readFile(MANIFEST, "utf8"));
+const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 const version = manifest.version;
 const zipName = `cueparcel-v${version}-chromium.zip`;
 
@@ -174,6 +181,65 @@ if (files.some((f) => f.name.startsWith("dist/"))) {
   problems.push("a path under dist/ leaked into the archive names");
 }
 if (manifest.manifest_version !== 3) problems.push(`manifest_version is ${manifest.manifest_version}, expected 3`);
+/**
+ * Version agreement. Packaging whatever happens to be in dist/ is how you ship
+ * the wrong build: a stale dist/ silently produces an artifact whose version
+ * disagrees with package.json, the tag and the CHANGELOG. Measured: with
+ * dist/manifest.json tampered to 9.9.9 this script happily packaged "9.9.9"
+ * until this check existed.
+ */
+if (pkg.version !== manifest.version) {
+  problems.push(
+    `version mismatch: package.json says ${pkg.version} but dist/manifest.json says ${manifest.version} — dist/ is stale, rebuild before packaging`,
+  );
+}
+/**
+ * Rebuild evidence. `npm run package:release` rebuilds first, but running this
+ * script directly does not, so a dist/ older than the sources would package stale
+ * code.
+ *
+ * The reference timestamp must be a file the BUILD GENERATES, never
+ * `dist/manifest.json`: that file is copied verbatim from `public/manifest.json`,
+ * so it keeps the source's mtime and made a fresh build look stale.
+ * `dist/assets/sidepanel.js` is written by Vite on every build.
+ */
+{
+  const generated = join(DIST, "assets", "sidepanel.js");
+  const generatedInfo = await stat(generated).catch(() => null);
+  if (generatedInfo === null) {
+    problems.push("dist/assets/sidepanel.js is missing — dist/ does not look like a completed build");
+  } else {
+    let newestSource = 0;
+    let newestSourceFile = "";
+    const consider = (mtimeMs, name) => {
+      if (mtimeMs > newestSource) {
+        newestSource = mtimeMs;
+        newestSourceFile = name;
+      }
+    };
+    const walk = async (dir) => {
+      for (const entry of await readdir(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          await walk(full);
+          continue;
+        }
+        const info = await stat(full);
+        consider(info.mtimeMs, relative(root, full).split(sep).join("/"));
+      }
+    };
+    for (const dir of ["src", "public"]) await walk(join(root, dir));
+    for (const script of ["vite.config.ts", "vite.content.config.ts", "scripts/validate-build.mjs"]) {
+      const info = await stat(join(root, script)).catch(() => null);
+      if (info !== null) consider(info.mtimeMs, script);
+    }
+    if (newestSource > generatedInfo.mtimeMs) {
+      problems.push(
+        `dist/ is older than ${newestSourceFile} — the artifact would contain stale code; run \`npm run build\` first`,
+      );
+    }
+  }
+}
 if (problems.length > 0) {
   console.error("\nRelease packaging refused:");
   for (const p of problems) console.error(`  - ${p}`);
@@ -186,12 +252,12 @@ for (const file of files) {
 }
 
 const zip = buildZip(entries);
-const zipPath = join(root, zipName);
+const zipPath = join(OUT_DIR, zipName);
 await writeFile(zipPath, zip);
 
 const sha256 = createHash("sha256").update(zip).digest("hex");
 const sums = `${sha256}  ${zipName}\n`;
-await writeFile(join(root, "SHA256SUMS.txt"), sums, "utf8");
+await writeFile(join(OUT_DIR, "SHA256SUMS.txt"), sums, "utf8");
 
 /* ------------------------------------------------------------ self-check -- */
 
@@ -239,6 +305,47 @@ function readEntry(buffer, wanted) {
   throw new Error(`entry ${wanted} not found in the archive`);
 }
 
+/**
+ * Verify EVERY entry by decompressing it and comparing its CRC-32 with the value
+ * stored in the archive.
+ *
+ * Checking only the entry names and the manifest would let a corrupted asset
+ * through: a truncated icon still has its name in the central directory. Chrome
+ * would then refuse the extension for a reason the release notes never mention.
+ */
+function verifyAllEntries(buffer) {
+  const results = [];
+  let cursor = 0;
+  while (cursor < buffer.length - 4) {
+    if (buffer.readUInt32LE(cursor) !== 0x04034b50) break;
+    const method = buffer.readUInt16LE(cursor + 8);
+    const expectedCrc = buffer.readUInt32LE(cursor + 14);
+    const compressedSize = buffer.readUInt32LE(cursor + 18);
+    const uncompressedSize = buffer.readUInt32LE(cursor + 22);
+    const nameLength = buffer.readUInt16LE(cursor + 26);
+    const extraLength = buffer.readUInt16LE(cursor + 28);
+    const name = buffer.toString("utf8", cursor + 30, cursor + 30 + nameLength);
+    const dataStart = cursor + 30 + nameLength + extraLength;
+    const payload = buffer.subarray(dataStart, dataStart + compressedSize);
+    let data;
+    let error = null;
+    try {
+      data = method === 8 ? inflateRawSync(payload) : Buffer.from(payload);
+    } catch (cause) {
+      error = `decompress failed: ${String(cause).slice(0, 80)}`;
+    }
+    if (error === null && data.length !== uncompressedSize) {
+      error = `size mismatch: header says ${uncompressedSize}, got ${data.length}`;
+    }
+    if (error === null && crc32(data) !== expectedCrc) {
+      error = `CRC mismatch: header says ${expectedCrc.toString(16)}, computed ${crc32(data).toString(16)}`;
+    }
+    results.push({ name, error });
+    cursor = dataStart + compressedSize;
+  }
+  return results;
+}
+
 const names = readCentralDirectory(zip);
 const checkFailures = [];
 if (!names.includes("manifest.json")) {
@@ -259,10 +366,37 @@ if (names.length !== files.length) checkFailures.push(`archive lists ${names.len
   }
 }
 
+// Verify every entry really decompresses and matches its recorded CRC.
+const entryChecks = verifyAllEntries(zip);
+const corrupt = entryChecks.filter((entry) => entry.error !== null);
+for (const entry of corrupt) checkFailures.push(`corrupt entry ${entry.name}: ${entry.error}`);
+if (entryChecks.length !== names.length) {
+  checkFailures.push(`verified ${entryChecks.length} entries but the central directory lists ${names.length}`);
+}
+
+// Every file the manifest points at must actually be in the archive, or Chrome
+// rejects the extension at load time with a missing-file error.
+{
+  const { data } = readEntry(zip, "manifest.json");
+  const parsed = JSON.parse(data.toString("utf8"));
+  const referenced = new Set();
+  for (const value of Object.values(parsed.icons ?? {})) referenced.add(String(value));
+  for (const value of Object.values(parsed.action?.default_icon ?? {})) referenced.add(String(value));
+  if (typeof parsed.action?.default_popup === "string") referenced.add(parsed.action.default_popup);
+  if (typeof parsed.background?.service_worker === "string") referenced.add(parsed.background.service_worker);
+  if (typeof parsed.side_panel?.default_path === "string") referenced.add(parsed.side_panel.default_path);
+  const missing = [...referenced].filter((file) => !names.includes(file));
+  if (missing.length > 0) {
+    checkFailures.push(`manifest references files that are not in the archive: ${missing.join(", ")}`);
+  }
+  console.log(`  manifest refs    : ${referenced.size} checked, ${missing.length} missing`);
+}
+
 console.log(`packaged ${files.length} files from dist/`);
 console.log(`  manifest_version : ${manifest.manifest_version}`);
 console.log(`  product version  : ${version}`);
 console.log(`  archive root     : ${JSON.stringify(names[0])} (root is flat: ${!names.some((n) => n.startsWith("dist/"))})`);
+console.log(`  entry integrity  : ${entryChecks.length - corrupt.length}/${entryChecks.length} entries decompress with a matching CRC-32`);
 console.log(`  archive size     : ${(zip.length / 1024).toFixed(1)} KB`);
 console.log(`  sha256           : ${sha256}`);
 console.log(`  wrote            : ${zipName}, SHA256SUMS.txt`);

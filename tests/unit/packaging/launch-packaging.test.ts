@@ -16,8 +16,9 @@
  * notice by eye, so it is asserted mechanically.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
@@ -144,11 +145,49 @@ describe("README presentation", () => {
 
   it("keeps the credibility evidence, not just the pitch", () => {
     // The engineering truth must survive the marketing restructure.
-    for (const evidence of ["723", "13", "TaskSpec", "producer.name", "Page2Agent", "NO_CONTENT_FOUND"]) {
+    for (const evidence of ["TaskSpec", "producer.name", "Page2Agent", "NO_CONTENT_FOUND", "E2E"]) {
       expect(README, `README dropped the credibility evidence: ${evidence}`).toContain(evidence);
     }
     expect(README).toMatch(/### Three provenance dimensions, never conflated/);
     expect(README).toMatch(/Not explicitly provided in source/);
+  });
+
+  it("states a test count that matches what is actually in the repository", () => {
+    /**
+     * The README claims a specific number of tests and files. An earlier revision
+     * claimed the count from `main` (723 / 73) while the branch carrying it had
+     * 759 / 74, which is exactly the kind of stale number that makes every other
+     * claim look unchecked.
+     *
+     * The file count is derived from the test tree, so it cannot drift. The test
+     * count cannot be derived without running the suite, so it is only checked for
+     * shape and for internal consistency with the file count.
+     */
+    /**
+     * Vitest runs tests/unit and tests/integration. tests/e2e is Playwright and is
+     * reported separately, so it must not be counted here â€” including it made this
+     * assertion claim 75 files where the suite reports 74.
+     */
+    const testFiles = readdirSync(join(rootDir, "tests"), { recursive: true })
+      .map((entry) => String(entry).split("\\").join("/"))
+      .filter((name) => /\.(test|spec)\.tsx?$/.test(name))
+      .filter((name) => !name.startsWith("e2e/"));
+    const e2eFiles = readdirSync(join(rootDir, "tests"), { recursive: true })
+      .map((entry) => String(entry).split("\\").join("/"))
+      .filter((name) => name.startsWith("e2e/") && /\.(test|spec)\.tsx?$/.test(name));
+    expect(e2eFiles.length, "expected exactly one Playwright E2E spec").toBe(1);
+    const claimed = /(\d+)\s+(?:unit \/ integration \/ component )?tests? across (\d+) files/i.exec(README);
+    expect(claimed, "README no longer states a test count").not.toBeNull();
+    const claimedTests = Number(claimed?.[1]);
+    const claimedFiles = Number(claimed?.[2]);
+    expect(claimedFiles, `README claims ${claimedFiles} test files, the tests/ tree has ${testFiles.length}`).toBe(
+      testFiles.length,
+    );
+    // Sanity band: more tests than files, and not a wildly implausible number.
+    expect(claimedTests).toBeGreaterThan(claimedFiles);
+    expect(claimedTests).toBeLessThan(claimedFiles * 40);
+    // The E2E figure is separate and small.
+    expect(README).toMatch(/13 browser E2E/);
   });
 
   it("contains no fabricated engagement or unsupported marketing claims", () => {
@@ -174,7 +213,7 @@ describe("README presentation", () => {
       /sends? (your|the) (data|context) to (an? )?(AI|LLM|model)/i,
       /summari[sz]es? (it|your|the) (with|using) (an? )?(AI|LLM|model)/i,
       // A claim that the product syncs. The privacy section legitimately says
-      // "no cloud sync" â€?an absence statement â€?so a bare /cloud sync/ match
+      // "no cloud sync" â€”?an absence statement â€”?so a bare /cloud sync/ match
       // would flag the very sentence that makes the honest claim.
       /(?<!no )(?<!without )(?<!not )cloud sync/i,
     ];
@@ -312,11 +351,14 @@ describe("launch assets", () => {
 // -------------------------------------------------------- release packaging ---
 
 describe("release packaging", () => {
-  const ZIP = join(rootDir, "cueparcel-v1.1.0-chromium.zip");
+  /** The artifact name is derived from the manifest so it survives a version bump. */
+  const currentVersion = (JSON.parse(read("public", "manifest.json")) as { version: string }).version;
+  const ZIP_NAME = `cueparcel-v${currentVersion}-chromium.zip`;
+  const ZIP = join(rootDir, ZIP_NAME);
 
   /**
    * Read a ZIP's central directory without a dependency. The property under test
-   * â€?where `manifest.json` sits â€?is exactly what a naive archiver gets wrong,
+   * â€” where `manifest.json` sits â€” is exactly what a naive archiver gets wrong,
    * so it is checked by reading the real bytes rather than by trusting the
    * packaging script's own claim.
    */
@@ -354,12 +396,68 @@ describe("release packaging", () => {
     throw new Error(`entry ${wanted} not found`);
   }
 
-  it("puts manifest.json at the ARCHIVE ROOT, not under dist/", () => {
-    if (!existsSync(ZIP)) {
-      // The artifact is gitignored and built on demand; skipping silently would
-      // hide a real failure, so the test says what to run instead.
-      expect.fail("run `npm run package:release` before this test: cueparcel-v1.1.0-chromium.zip is missing");
+  /** CRC-32 of a buffer, computed the way the ZIP format defines it. */
+  function crc32(buffer: Buffer): number {
+    let table: number[] | null = null;
+    if (table === null) {
+      table = [];
+      for (let n = 0; n < 256; n += 1) {
+        let c = n;
+        for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+        table[n] = c >>> 0;
+      }
     }
+    let c = 0xffffffff;
+    for (const byte of buffer) c = (table[(c ^ byte) & 0xff] ?? 0) ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
+
+  /** Every local header's name, stored CRC and decompressed payload. */
+  function readEntries(buffer: Buffer): { name: string; crc: number; data: Buffer }[] {
+    const out: { name: string; crc: number; data: Buffer }[] = [];
+    let cursor = 0;
+    while (cursor < buffer.length - 4) {
+      if (buffer.readUInt32LE(cursor) !== 0x04034b50) break;
+      const method = buffer.readUInt16LE(cursor + 8);
+      const crc = buffer.readUInt32LE(cursor + 14);
+      const compressedSize = buffer.readUInt32LE(cursor + 18);
+      const nameLength = buffer.readUInt16LE(cursor + 26);
+      const extraLength = buffer.readUInt16LE(cursor + 28);
+      const name = buffer.toString("utf8", cursor + 30, cursor + 30 + nameLength);
+      const start = cursor + 30 + nameLength + extraLength;
+      const payload = buffer.subarray(start, start + compressedSize);
+      out.push({ name, crc, data: method === 8 ? inflateRawSync(payload) : Buffer.from(payload) });
+      cursor = start + compressedSize;
+    }
+    return out;
+  }
+
+  /**
+   * The ZIP is gitignored and produced on demand, so on a clean checkout it does
+   * not exist. Building it here rather than skipping keeps these tests meaningful
+   * in CI â€” an earlier revision used `expect.fail` when it was missing, which made
+   * `npm test` red on a fresh clone while passing locally. That is the worst
+   * possible failure mode for a release gate.
+   *
+   * It runs the same script CI runs, so the staleness guard is exercised too
+   * rather than bypassed. A refusal here is reported with the script's own
+   * explanation, which is the actionable message ("run npm run build first").
+   */
+  function ensureArtifact(): void {
+    if (existsSync(ZIP)) return;
+    const result = spawnSync(process.execPath, [join(rootDir, "scripts", "package-release.mjs")], {
+      cwd: rootDir,
+      encoding: "utf8",
+    });
+    if (result.status !== 0 || !existsSync(ZIP)) {
+      expect.fail(
+        `the release artifact is missing and could not be produced. Run \`npm run package:release\` first.\n${result.stdout ?? ""}\n${result.stderr ?? ""}`,
+      );
+    }
+  }
+
+  it("puts manifest.json at the ARCHIVE ROOT, not under dist/", () => {
+    ensureArtifact();
     const buffer = readFileSync(ZIP);
     const names = centralDirectory(buffer);
     expect(names, "the archive has no manifest.json").toContain("manifest.json");
@@ -370,7 +468,7 @@ describe("release packaging", () => {
   });
 
   it("archives a manifest that parses and matches the shipped version", () => {
-    if (!existsSync(ZIP)) expect.fail("run `npm run package:release` first");
+    if (!existsSync(ZIP)) ensureArtifact();
     const manifest = JSON.parse(entryData(readFileSync(ZIP), "manifest.json").toString("utf8")) as {
       manifest_version?: number;
       version?: string;
@@ -379,16 +477,54 @@ describe("release packaging", () => {
       host_permissions?: string[];
     };
     expect(manifest.manifest_version).toBe(3);
-    expect(manifest.version).toBe("1.1.0");
+    expect(manifest.version).toBe(currentVersion);
     expect(manifest.name).toBe("CueParcel");
     expect(manifest.permissions).toEqual(["activeTab", "scripting", "sidePanel", "storage"]);
     expect(manifest.host_permissions).toBeUndefined();
   });
 
+  it("verifies every archived entry by decompressing it and checking its CRC-32", () => {
+    /**
+     * Checking only entry NAMES would let a corrupted asset through: a truncated
+     * icon still has its name in the central directory, and Chrome would then
+     * refuse the extension for a reason the release notes never mention.
+     */
+    if (!existsSync(ZIP)) ensureArtifact();
+    const buffer = readFileSync(ZIP);
+    const entries = readEntries(buffer);
+    expect(entries.length).toBeGreaterThan(10);
+    const corrupt = entries
+      .filter((entry) => crc32(entry.data) !== entry.crc)
+      .map((entry) => `${entry.name} (stored ${entry.crc.toString(16)}, computed ${crc32(entry.data).toString(16)})`);
+    expect(corrupt, `corrupt entries: ${corrupt.join(", ")}`).toEqual([]);
+  });
+
+  it("contains every file the manifest references", () => {
+    if (!existsSync(ZIP)) ensureArtifact();
+    const buffer = readFileSync(ZIP);
+    const names = centralDirectory(buffer);
+    const manifest = JSON.parse(entryData(buffer, "manifest.json").toString("utf8")) as {
+      icons?: Record<string, string>;
+      action?: { default_icon?: Record<string, string>; default_popup?: string };
+      background?: { service_worker?: string };
+      side_panel?: { default_path?: string };
+    };
+    const referenced = new Set<string>();
+    for (const value of Object.values(manifest.icons ?? {})) referenced.add(value);
+    for (const value of Object.values(manifest.action?.default_icon ?? {})) referenced.add(value);
+    if (manifest.action?.default_popup !== undefined) referenced.add(manifest.action.default_popup);
+    if (manifest.background?.service_worker !== undefined) referenced.add(manifest.background.service_worker);
+    if (manifest.side_panel?.default_path !== undefined) referenced.add(manifest.side_panel.default_path);
+    expect(referenced.size, "the manifest references nothing, which cannot be right").toBeGreaterThan(2);
+    const missing = [...referenced].filter((file) => !names.includes(file));
+    expect(missing, `manifest references files not in the archive: ${missing.join(", ")}`).toEqual([]);
+  });
+
   it("publishes a checksum that matches the archive", () => {
-    if (!existsSync(ZIP)) expect.fail("run `npm run package:release` first");
+    if (!existsSync(ZIP)) ensureArtifact();
     const sums = read("SHA256SUMS.txt").trim();
-    expect(sums).toMatch(/^[0-9a-f]{64} {2}cueparcel-v1\.1\.0-chromium\.zip$/);
+    expect(sums.endsWith(`  ${ZIP_NAME}`), `SHA256SUMS.txt does not name ${ZIP_NAME}`).toBe(true);
+    expect(sums).toMatch(/^[0-9a-f]{64} {2}/);
     // Recompute rather than trusting the file.
     const actual = createHash("sha256").update(readFileSync(ZIP)).digest("hex");
     expect(sums.startsWith(actual), "SHA256SUMS.txt does not match the archive").toBe(true);
@@ -489,6 +625,95 @@ describe("landing page", () => {
   });
 });
 
+
+// --------------------------------------------------------- link integrity ----
+
+describe("documentation links", () => {
+  /**
+   * Every Markdown document, not just the READMEs.
+   *
+   * An earlier revision only checked README.md and README_ZH.md, which let a
+   * broken relative link survive in docs/launch/RELEASE.md
+   * (`../docs/BRAND.md` from inside `docs/launch/` resolves to
+   * `docs/docs/BRAND.md`). This walks the whole documentation tree.
+   */
+  function markdownFiles(): string[] {
+    const out: string[] = [];
+    /**
+     * Only PUBLISHED documents. Directories that are gitignored (`.local/` holds
+     * QA scratch artifacts, for example) are not part of the repository a visitor
+     * sees, so their links are not this test's business.
+     */
+    const SKIP = new Set(["node_modules", ".git", ".local", "dist", "dist-e2e", "coverage", "test-results", "playwright-report"]);
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (SKIP.has(entry.name)) continue;
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (/\.(md|markdown)$/i.test(entry.name)) out.push(full);
+      }
+    };
+    walk(rootDir);
+    return out;
+  }
+
+  /** Relative link targets in a document, resolved against that document's directory. */
+  function brokenLinksIn(file: string): string[] {
+    const text = readFileSync(file, "utf8");
+    const targets = new Set<string>();
+    for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) targets.add(match[1]);
+    for (const match of text.matchAll(/(?:src|href)="([^"]+)"/g)) targets.add(match[1]);
+
+    const broken: string[] = [];
+    for (const target of targets) {
+      if (/^(https?:|mailto:|tel:|data:|blob:)/i.test(target)) continue;
+      if (target.startsWith("#")) continue;
+      const path = target.split("#")[0].split("?")[0];
+      if (path.length === 0) continue;
+      if (!existsSync(resolve(dirname(file), decodeURI(path)))) broken.push(target);
+    }
+    return broken;
+  }
+
+  it("resolves every relative link in every Markdown document", () => {
+    const problems: string[] = [];
+    const files = markdownFiles();
+    for (const file of files) {
+      for (const broken of brokenLinksIn(file)) {
+        problems.push(`${relative(rootDir, file).split(sep).join("/")} -> ${broken}`);
+      }
+    }
+    expect(problems, `broken relative links:\n${problems.join("\n")}`).toEqual([]);
+    expect(files.length, "no Markdown files were found to check").toBeGreaterThan(8);
+  });
+
+  it("points every documented absolute GitHub URL at the renamed repository", () => {
+    const problems: string[] = [];
+    for (const file of markdownFiles()) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/https:\/\/github\.com\/kallist\/[A-Za-z0-9._-]+/g)) {
+        if (!match[0].startsWith("https://github.com/kallist/CueParcel")) {
+          problems.push(`${relative(rootDir, file).split(sep).join("/")} -> ${match[0]}`);
+        }
+      }
+    }
+    expect(problems, `links to the pre-rename repository:\n${problems.join("\n")}`).toEqual([]);
+  });
+
+  it("does not advertise a release download that does not exist yet", () => {
+    /**
+     * The README must not tell users to download a release asset while the
+     * repository has no releases. Checked as text rather than over the network so
+     * the test stays offline and deterministic; it pins the wording the README
+     * actually uses.
+     */
+    expect(README).not.toMatch(/Download `cueparcel-v[\d.]+-chromium\.zip` from/i);
+    expect(README).toMatch(/there is no downloadable release yet|once a release exists/i);
+  });
+});
 
 describe("repository branding after the rename", () => {
   const CURRENT_DOCS = [

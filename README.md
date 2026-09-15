@@ -25,6 +25,15 @@ choose what you want AI to do, inspect the package, and copy it to any agent.
 
 </div>
 
+<!--
+  The repository's social preview (Settings -> General -> Social preview) is a
+  GitHub UI setting with no file-based equivalent, so the prepared 1200x630 card
+  (docs/assets/cueparcel-social-preview.png) is deliberately NOT embedded above:
+  GitHub would render the raw PNG at full width as a large block of text-and-logo
+  with nothing for a reader to learn. It is uploaded manually — see
+  docs/launch/PLAN.md.
+-->
+
 ---
 
 > **Every visual in this README is a real screenshot of the production extension.**
@@ -67,17 +76,27 @@ choose the context, and you can see exactly what you chose.
 
 ## Quick Start
 
-### A. Install the release (recommended)
+CueParcel is not on any extension store yet. **Chrome Web Store publication is
+planned, not shipped**, and there is no downloadable release yet either — the
+first release is being prepared. Both routes below work today.
 
-**Chrome Web Store publication is planned, not shipped** — there is no store
-listing yet. Until then, load the release build:
+### A. Build it and load it unpacked (works today)
 
-1. Download `cueparcel-v1.1.0-chromium.zip` from
-   [Releases](https://github.com/kallist/CueParcel/releases) and unzip it.
-2. Open `chrome://extensions` — on Edge, `edge://extensions`.
-3. Turn on **Developer mode** (top right).
-4. Click **Load unpacked** and select the unzipped folder.
-5. Pin CueParcel: click the Extensions (puzzle-piece) icon in the toolbar, then
+Prerequisites: **Node.js 24** (see `.nvmrc`).
+
+```bash
+git clone https://github.com/kallist/CueParcel.git
+cd CueParcel
+npm ci
+npm run build          # -> dist/
+```
+
+Then:
+
+1. Open `chrome://extensions` — on Edge, `edge://extensions`.
+2. Turn on **Developer mode** (top right).
+3. Click **Load unpacked** and select the `dist/` folder you just built.
+4. Pin CueParcel: click the Extensions (puzzle-piece) icon in the toolbar, then
    the pin next to **CueParcel**.
 
 > Chrome requires the user to pin an extension; CueParcel cannot pin itself.
@@ -87,18 +106,21 @@ listing yet. Until then, load the release build:
 Then click the CueParcel icon on any page: capture runs and the Side Panel opens.
 Keyboard alternative: **`Alt+Shift+Y`**.
 
-### B. Build from source
+### B. From a release ZIP (once a release exists)
 
-Prerequisites: **Node.js 24** (see `.nvmrc`).
+`npm run package:release` produces a loadable archive at the repository root:
 
 ```bash
-git clone https://github.com/kallist/CueParcel.git
-cd CueParcel
-npm ci
-npm run build
+npm run package:release     # -> cueparcel-v1.1.0-chromium.zip + SHA256SUMS.txt
 ```
 
-Then load the `dist/` folder unpacked as in steps 2–4 above.
+Unzip it and load the **unzipped folder** with **Load unpacked** as in steps 1–4
+above. `manifest.json` is at the archive root, so the unzipped folder is the
+extension folder — do not point Chrome at a parent directory.
+
+When the first GitHub Release is published, the same ZIP will be attached there;
+until then, build it as above. Release mechanics are documented in
+[docs/launch/RELEASE.md](docs/launch/RELEASE.md).
 
 ## What it understands
 
@@ -267,7 +289,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow.
 
 ## Testing
 
-**723 unit / integration / component tests across 73 files, plus 13 browser E2E
+**765 unit / integration / component tests across 74 files, plus 13 browser E2E
 tests — all passing.** No skipped tests, no `continue-on-error`.
 
 - **Unit** — domain, validators, messaging (including all lens messages), cart

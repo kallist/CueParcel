@@ -305,7 +305,7 @@ a:hover {
 }
 
 /* The demo recording shows one static frame instead of animating when the
-   visitor asks their system for reduced motion (main.js builds that frame). */
+   visitor asks their system for reduced motion. */
 .demo-figure {
   display: block;
 }
@@ -320,6 +320,24 @@ a:hover {
 
 [hidden] {
   display: none;
+}
+
+/*
+ * Reduced motion is handled HERE, not only in main.js, so the preference is
+ * honoured before any script runs and still holds if scripting is unavailable.
+ * The still element's `src` is the recording itself, so the fallback renders a
+ * real frame rather than an empty box. `!important` is required because the
+ * script toggles the `hidden` attribute at runtime.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .demo-gif,
+  #demo-still[hidden] ~ .demo-gif {
+    display: none !important;
+  }
+
+  .demo-figure .demo-still {
+    display: block !important;
+  }
 }
 
 .motion-note {

@@ -20,6 +20,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # The packaging tests validate the real release artifact, and that artifact
+      # is gitignored, so it has to be produced before `npm run test`. Without
+      # this step those tests fail on a clean checkout while passing locally,
+      # which is the worst possible failure mode for a release gate.
+      - run: npm run package:release
       - run: npm run test
       - run: npm run build
 

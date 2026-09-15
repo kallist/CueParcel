@@ -1,19 +1,25 @@
 /*
  * CueParcel landing page — the only script on this page.
  *
- * Purpose: a GIF keeps animating on its own and cannot be stopped by CSS, so
- * "prefers-reduced-motion: reduce" is honoured here by showing a still frame
- * of the recording instead of the animation.
+ * Purpose: a GIF keeps animating on its own, so "prefers-reduced-motion: reduce"
+ * has to be honoured.
  *
- * How the still frame is produced, in order:
+ * WHO DOES WHAT
+ *   CSS (styles.css) owns the preference: a `prefers-reduced-motion: reduce`
+ *   media query hides the animation and shows the still frame BEFORE this script
+ *   runs, and keeps working with scripting disabled. The still element's `src` is
+ *   the recording itself, so even with no script it renders one static frame
+ *   rather than an empty box.
+ *   THIS SCRIPT only upgrades that still to a cleaner extracted first frame when
+ *   the browser lets it, and replies to a preference change at runtime.
+ *
+ * How the better still frame is produced, in order:
  *   1. Fetch the GIF bytes and decode the first frame. Works when the site is
  *      served (GitHub Pages / any web server).
  *   2. Fetch the image and draw it to a canvas. Works when the page is opened
  *      straight from the filesystem, where Chrome blocks (1).
- * Both steps verify the frame really produced pixels before the still frame is
- * shown, and the animation is hidden only once a still frame exists. If neither
- * step produces one, the animation is hidden anyway (never played) and a text
- * note takes its place.
+ * If neither produces a frame, the raw still that CSS already showed stays on
+ * screen — never an empty gap and never an animation.
  *
  * No analytics, no telemetry, no third-party request: the only bytes fetched
  * are the page's own demo recording.
@@ -31,8 +37,12 @@
 
   var stillReady = false;
 
+  /**
+   * The CSS media query is the source of truth for the initial state. This only
+   * tracks a preference that CHANGES while the page is open, so it must not fight
+   * the stylesheet: when motion is allowed, the raw still is hidden again.
+   */
   function showStill() {
-    if (!stillReady || !query.matches) return;
     still.hidden = false;
     gif.hidden = true;
   }
@@ -42,10 +52,9 @@
     gif.hidden = false;
   }
 
-  function freezeWithoutFrame() {
-    // No still frame available: keep the recording out of the way rather than
-    // let it loop, and say so instead of showing a broken image.
-    still.hidden = true;
+  /** No extractable frame: the raw still already showing is the fallback. */
+  function keepRawStill() {
+    still.hidden = false;
     gif.hidden = true;
     if (note) note.hidden = false;
   }
@@ -64,9 +73,7 @@
     if (!context.getImageData(0, 0, 1, 1).data[3]) return false;
 
     stillReady = true;
-    still.addEventListener('load', showStill, { once: true });
     still.src = canvas.toDataURL('image/png');
-    if (still.complete) showStill();
     return true;
   }
 
@@ -100,9 +107,9 @@
   function fromImageElement() {
     var probe = new Image();
     probe.onload = function () {
-      if (!publish(probe)) freezeWithoutFrame();
+      if (!publish(probe)) keepRawStill();
     };
-    probe.onerror = freezeWithoutFrame;
+    probe.onerror = keepRawStill;
     probe.src = gif.getAttribute('src');
   }
 
@@ -115,14 +122,9 @@
       showStill();
       return;
     }
+    // CSS has already swapped to the raw still; try to improve it.
     fromFetchedBytes();
   }
-
-  // A later page load may already have produced the frame.
-  still.addEventListener('load', function () {
-    stillReady = true;
-    showStill();
-  });
 
   if (typeof query.addEventListener === 'function') {
     query.addEventListener('change', apply);
@@ -130,5 +132,6 @@
     query.addListener(apply);
   }
 
-  apply();
+  // Only react to a runtime change; the initial state belongs to the stylesheet.
+  if (query.matches && note) note.hidden = false;
 })();

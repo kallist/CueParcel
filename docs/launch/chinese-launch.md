@@ -9,7 +9,7 @@ CueParcel（原名 Page2Agent）是 local-first 的 Chrome / Edge Manifest V3 �
 
 六个能力：**Context Lens** 在页面内可视化挑选，语义区域悬停高亮并实时显示已选内容的 token 估算，点击加入或排除，页面 DOM 全程不被修改。**Context Cart** 把多个页面、挑选区域和文本选择合成一份上下文，各标角色（Task / Reference / Evidence / Example / Selection），只允许一个主来源，可排序、撤销、清空，仅存在于当前会话。**Context Recipes** 不写 prompt，改成选意图：Learn、Compare、Verify、Build、Fix，建议来自 adapter 分析，决定权仍在你。**Semantic Adapter 2.0** 识别 Generic Article、GitHub Issue、GitHub Pull Request、Technical Documentation，置信度不足时诚实回退到 generic。**TaskSpec** 是带 `schemaVersion` "1.0" 的确定性 JSON 契约：sources、roles、provenance、来源事实、仅在原文确实写了时才出现的验收标准、显式 unknowns、生成指令与 token 估算，其他工具不必了解扩展内部即可消费。**Context Receipt + Nutrition Label** 说明 agent 到底会收到什么：总 token 与 source / generated / metadata 拆分，并可展开为 Included / Excluded、生成内容与原文的分离，以及 unknowns，没有虚构的质量评分。
 
-隐私上全部本地运行：没有后端、遥测、analytics、API key、云同步和远程代码；捕获永远由你手动触发。扩展只申请四项权限——`activeTab`、`scripting`、`sidePanel`、`storage`，没有 host permissions，没有 `<all_urls>`，没有 tabs、cookies、history。会话状态只写在 `chrome.storage.session`，关闭浏览器即清空，抓取的页面内容不写入 `chrome.storage.local`。仓库中 723 个单元/集成测试（73 个文件）与 13 个 Playwright 浏览器 E2E 全部通过。
+隐私上全部本地运行：没有后端、遥测、analytics、API key、云同步和远程代码；捕获永远由你手动触发。扩展只申请四项权限——`activeTab`、`scripting`、`sidePanel`、`storage`，没有 host permissions，没有 `<all_urls>`，没有 tabs、cookies、history。会话状态只写在 `chrome.storage.session`，关闭浏览器即清空，抓取的页面内容不写入 `chrome.storage.local`。仓库中 765 个单元/集成测试（74 个文件）与 13 个 Playwright 浏览器 E2E 全部通过。
 
 现在还不行的部分也一并说清：尚未上架 Chrome Web Store，安装要靠 GitHub release 解压、`chrome://extensions` 开启开发者模式后 Load unpacked，商店分发仍属计划。提取基于 DOM 启发式，App 化页面、仅脚本渲染的内容、iframe 与 PDF 可能提取不到，GitHub 前端变化也可能让 GitHub adapter 失效。token 数只是某个离线启发式的确定性估算，不等于任何模型的 tokenizer。预览是纯文本，不渲染 Markdown；没有历史记录、账号与同步。已知问题：正文位于 shadow root 内的页面会返回 `NO_CONTENT_FOUND`，仍在跟踪。
 

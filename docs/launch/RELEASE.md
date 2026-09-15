@@ -118,7 +118,7 @@ Attach `cueparcel-v1.1.0-chromium.zip` and `SHA256SUMS.txt` as release assets.
   not change the version.
 - **TaskSpec `schemaVersion` and `producer.name` are a separate contract.** They
   are versioned independently of the product. `producer.name` stays
-  `"Page2Agent"`; see [../docs/BRAND.md](../docs/BRAND.md).
+  `"Page2Agent"`; see [../BRAND.md](../BRAND.md).
 - `CHANGELOG.md` must have a section for the version before you tag it.
 
 ## 5. After publishing

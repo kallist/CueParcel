@@ -65,24 +65,10 @@ CueParcel 让你可视化地挑选真正有用的内容、组合多个来源、�
 
 ## 快速开始
 
-### A. 安装 release（推荐）
+CueParcel 目前还没有上架任何扩展商店。**Chrome 应用商店版本尚在计划中，还没有上架**，
+也还没有可下载的 release —— 第一个 release 正在准备。下面两种方式现在都能用。
 
-**Chrome 应用商店版本尚在计划中，还没有上架。** 目前请按下面的方式安装：
-
-1. 从 [Releases](https://github.com/kallist/CueParcel/releases) 下载
-   `cueparcel-v1.1.0-chromium.zip` 并解压。
-2. 打开 `chrome://extensions`（Edge 为 `edge://extensions`）。
-3. 打开右上角的 **开发者模式**。
-4. 点击 **加载已解压的扩展程序**，选择刚解压出来的文件夹。
-5. 固定 CueParcel：点击工具栏上的扩展（拼图）图标，再点 **CueParcel** 旁边的图钉。
-
-> 固定扩展必须由用户自己操作，扩展无法自己固定自己。当 CueParcel 检测到自己还没被
-> 固定时，会显示一张可关闭的简短引导卡片说明这一点；你关掉之后它就不会再打扰你。
-
-之后在任意页面点击 CueParcel 图标：自动开始捕获，并打开侧边栏。
-键盘替代方案：**`Alt+Shift+Y`**。
-
-### B. 从源码构建
+### A. 自己构建并加载已解压扩展（现在就能用）
 
 前置条件：**Node.js 24**（见 `.nvmrc`）。
 
@@ -90,10 +76,36 @@ CueParcel 让你可视化地挑选真正有用的内容、组合多个来源、�
 git clone https://github.com/kallist/CueParcel.git
 cd CueParcel
 npm ci
-npm run build
+npm run build          # -> dist/
 ```
 
-然后按上面第 2–4 步加载 `dist/` 文件夹。
+然后：
+
+1. 打开 `chrome://extensions`（Edge 为 `edge://extensions`）。
+2. 打开右上角的 **开发者模式**。
+3. 点击 **加载已解压的扩展程序**，选择刚生成的 `dist/` 文件夹。
+4. 固定 CueParcel：点击工具栏上的扩展（拼图）图标，再点 **CueParcel** 旁边的图钉。
+
+> 固定扩展必须由用户自己操作，扩展无法自己固定自己。当 CueParcel 检测到自己还没被
+> 固定时，会显示一张可关闭的简短引导卡片说明这一点；你关掉之后它就不会再打扰你。
+
+之后在任意页面点击 CueParcel 图标：自动开始捕获，并打开侧边栏。
+键盘替代方案：**`Alt+Shift+Y`**。
+
+### B. 使用 release 压缩包（等有了 release 之后）
+
+`npm run package:release` 会在仓库根目录生成可直接加载的压缩包：
+
+```bash
+npm run package:release     # -> cueparcel-v1.1.0-chromium.zip + SHA256SUMS.txt
+```
+
+解压后，按上面第 1–4 步用 **加载已解压的扩展程序** 选择**解压出来的那个文件夹**。
+`manifest.json` 就在压缩包的根目录，所以解压出来的文件夹本身就是扩展目录 ——
+不要把 Chrome 指向它的上一级目录。
+
+等第一个 GitHub Release 发布后，同一个压缩包会附在那里；在那之前请按上面的方式自己
+构建。发布流程记录在 [docs/launch/RELEASE.md](docs/launch/RELEASE.md)。
 
 ## 它能理解什么
 
@@ -242,7 +254,7 @@ manifest，因为通过 GUI 自动化点击工具栏无法可靠地产生 `activ
 
 ## 测试
 
-**73 个文件、723 个单元 / 集成 / 组件测试，外加 13 个浏览器 E2E 测试，全部通过。**
+**74 个文件、765 个单元 / 集成 / 组件测试，外加 13 个浏览器 E2E 测试，全部通过。**
 没有跳过的测试，没有 `continue-on-error`。
 
 - **单元** —— 领域模型、校验器、消息（含全部 lens 消息）、cart reducer、receipt、

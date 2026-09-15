@@ -52,10 +52,18 @@
       <figure class="shot">
         <span class="demo-figure">
           <img class="demo-gif" src="assets/cueparcel-demo.gif" width="980" height="470" alt="Animated recording of CueParcel: semantic regions of a page highlight as the cursor moves over them, sections are clicked to add or remove them from the context, and the token counts in the Side Panel update with each pick.">
-          <img class="demo-still" id="demo-still" src="assets/cueparcel-demo.gif" width="980" height="470" alt="A single frame of the CueParcel recording showing the page with a semantic region highlighted and the Side Panel listing the picked sections with their token counts." hidden>
+          <!--
+            Reduced-motion fallback. `src` deliberately points at the recording so
+            that WITH SCRIPTING DISABLED this still renders one non-animating
+            frame instead of nothing. A CSS media query (see styles.css) swaps the
+            animation for this still, so the preference is honoured before any
+            script runs; main.js only upgrades the still to a cleaner extracted
+            frame when it can.
+          -->
+          <img class="demo-still" id="demo-still" src="assets/cueparcel-demo.gif" width="980" height="470" alt="A still frame of the CueParcel recording, showing the page with a semantic region highlighted and the Side Panel listing the picked sections with their token counts." hidden>
         </span>
         <figcaption>Recording of CueParcel 1.1.0 running in a Chromium browser.</figcaption>
-        <p class="motion-note" id="demo-motion-note" hidden>Your system asks for reduced motion, so the animated recording is not played here. The still screenshots above and below show the same panel.</p>
+        <p class="motion-note" id="demo-motion-note" hidden>Your system asks for reduced motion, so the animated recording is not played here. A single frame of it is shown instead; the screenshots elsewhere on this page show the product in the same states.</p>
       </figure>
     </div>
   </section>
