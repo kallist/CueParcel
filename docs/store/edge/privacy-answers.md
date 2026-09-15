@@ -84,7 +84,7 @@ These are read from the source and do not depend on any form's wording:
 | Behaviour | Confirmed value | Evidence |
 |---|---|---|
 | Webpage content is accessed | **Yes — only after an explicit user action** (toolbar click or `Alt+Shift+Y`), only for the active tab | `service-worker.ts` `onClicked` path; `AUDIT.md` §2 |
-| Where that content is processed | **Entirely locally, inside the extension, in the browser** | no network APIs anywhere in `src/` or `dist/` |
+| Where that content is processed | **Entirely locally, inside the extension, in the browser** | no application-authored outbound network calls; the packaged Vite module-preload helper may `fetch` same-extension module assets, and `AUDIT.md` §3 found no external endpoint |
 | Is any data transmitted off the device by CueParcel? | **No** | `AUDIT.md` §3 |
 | Is any data collected by CueParcel (received and retained off-device)? | **No** | same |
 | Is data sold or shared with third parties? | **No.** There is no third party to share with: no server, no SDK, no analytics vendor | `package.json` dependencies; bundle contents |

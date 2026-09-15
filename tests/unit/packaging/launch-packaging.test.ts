@@ -907,6 +907,52 @@ describe("landing page", () => {
     }
   });
 
+  it("does not claim the shipped bundle is free of network calls", () => {
+    /**
+     * `dist/assets/sidepanel.js` legitimately contains Vite's module-preload
+     * helper, which calls `fetch` on same-extension module-preload hrefs, and
+     * AUDIT.md §3 documents exactly that. The privacy and store documents must
+     * therefore not claim that no `fetch` — or no network API at all — exists in
+     * the shipped bundle. The true claim is the narrower one: no
+     * application-authored outbound call, and no external endpoint.
+     */
+    const docs: Array<[string, string]> = [
+      ["PRIVACY.md", read("PRIVACY.md")],
+      ["site/privacy.html", read("site", "privacy.html")],
+      ["docs/store/edge/privacy-answers.md", read("docs", "store", "edge", "privacy-answers.md")],
+    ];
+    /**
+     * These are the exact absolute constructions the documents used before the
+     * bundled preload helper was accounted for. They assert absence across the
+     * whole package, which is false; the corrected wording scopes the absence to
+     * the application source and names the helper separately. Matching the
+     * constructions rather than a loose "no fetch … shipped" window avoids
+     * flagging the corrected sentences, which mention both on purpose.
+     */
+    const falseAbsolutes = [
+      /no\s+network\s+APIs?\s+anywhere/i,
+      /no\s+network\s+requests?\s+of\s+its\s+own/i,
+      /source or its shipped bundle/i,
+      /source or shipped bundle/i,
+    ];
+    for (const [name, text] of docs) {
+      for (const pattern of falseAbsolutes) {
+        expect(text, `${name} still claims the whole package has no network calls: ${pattern}`).not.toMatch(
+          pattern,
+        );
+      }
+      // The precise qualification has to be present instead of the absolute claim.
+      expect(text, `${name} does not mention the bundled preload helper`).toMatch(
+        /module-preload|modulepreload/i,
+      );
+    }
+
+    // The audit the claim rests on must still document the helper and its file.
+    const audit = read("docs", "store", "edge", "AUDIT.md");
+    expect(audit, "AUDIT.md no longer documents the bundled fetch").toMatch(/Vite's\s+module-preload/);
+    expect(audit).toContain("dist/assets/sidepanel.js");
+  });
+
   it("points every local asset reference at a file that exists", () => {
     const html = read("site", "index.html");
     const refs = new Set<string>();

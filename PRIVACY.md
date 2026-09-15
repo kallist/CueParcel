@@ -62,10 +62,15 @@ derived, structured representation.
 
 - There is no CueParcel backend, server, or API. No CueParcel-operated system
   receives anything, because no such system exists.
-- The extension makes **no network requests of its own**. The audit found no
-  `fetch`, `XMLHttpRequest`, `WebSocket`, `sendBeacon`, or dynamic import anywhere
-  in the extension's source or its shipped bundle. The only `http` strings in the
-  shipped package are SVG XML namespace declarations.
+- The extension makes **no outbound network requests to external services**.
+  CueParcel's application source contains no `fetch`, `XMLHttpRequest`,
+  `WebSocket`, `sendBeacon`, or dynamic import calls. The shipped side-panel bundle
+  does contain Vite's module-preload helper, which may use `fetch` for
+  same-extension module assets; the package audit found no external endpoint in the
+  bundle, and no code path transmits captured content. The `http` strings in the
+  shipped package are XML namespace declarations, a literal used by the
+  test-harness build check, and React's error-message URL — none of them a network
+  endpoint, and none of them contacted.
 - Extraction, cleaning, Markdown and JSON serialisation, token estimation, and
   receipt generation all run as ordinary in-browser code.
 - The extension does **not** contact an AI provider. If you paste the result into
@@ -253,7 +258,7 @@ A summary of the audit that this policy is based on:
 | Claim in this policy | How it was verified |
 |---|---|
 | Access requires an explicit user action | The extension's only capture path begins at `chrome.action.onClicked` |
-| No network requests | No `fetch`, `XMLHttpRequest`, `WebSocket`, `sendBeacon`, or dynamic import exists in the extension source or shipped bundle |
+| No outbound requests to external services | Application source contains no `fetch`, `XMLHttpRequest`, `WebSocket`, `sendBeacon`, or dynamic import; the shipped bundle's only `fetch` is Vite's same-extension module-preload helper, and the package audit found no external endpoint |
 | No remote code | No `eval`, no `new Function`, no remotely loaded script; CSP is `script-src 'self'` |
 | No analytics or telemetry | No analytics dependency, no reporting code path |
 | Session-scoped capture storage | Captured content is written to `chrome.storage.session` only |

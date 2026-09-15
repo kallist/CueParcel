@@ -69,7 +69,7 @@
       <p class="section-lede">Entirely locally, inside your browser, inside the extension.</p>
       <ul>
         <li>There is <strong>no CueParcel backend, server, or API</strong>. No CueParcel-operated system receives anything, because no such system exists.</li>
-        <li>The extension makes <strong>no network requests of its own</strong>. The published audit found no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, <code>sendBeacon</code> or dynamic import anywhere in the extension's source or its shipped bundle. The only <code>http</code> strings in the shipped package are SVG XML namespace declarations.</li>
+        <li>The extension makes <strong>no outbound network requests to external services</strong>. CueParcel's application source contains no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, <code>sendBeacon</code> or dynamic import calls. The shipped side-panel bundle does contain Vite's module-preload helper, which may use <code>fetch</code> for same-extension module assets; the package audit found no external endpoint in the bundle, and no code path transmits captured content. The <code>http</code> strings in the shipped package are XML namespace declarations, a literal used by the test-harness build check, and React's error-message URL — none of them a network endpoint, and none of them contacted.</li>
         <li>Extraction, cleaning, Markdown and JSON serialisation, size estimation and receipt generation all run as ordinary in-browser code.</li>
         <li>The extension does <strong>not contact an AI provider</strong>. If you paste the result into an AI tool later, that is your action, under that tool's own privacy policy.</li>
       </ul>
@@ -244,7 +244,7 @@
       <p class="section-lede">Every claim here is checkable. This is the audit it rests on; the full version is published in the repository at <code>docs/store/edge/AUDIT.md</code>.</p>
       <ul>
         <li><strong>Access requires an explicit user action</strong> — the extension's only capture path begins at the toolbar click handler.</li>
-        <li><strong>No network requests</strong> — no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, <code>sendBeacon</code> or dynamic import exists in the extension source or its shipped bundle.</li>
+        <li><strong>No outbound requests to external services</strong> — the application source contains no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, <code>sendBeacon</code> or dynamic import; the shipped bundle's only <code>fetch</code> is Vite's same-extension module-preload helper, and the package audit found no external endpoint.</li>
         <li><strong>No remote code</strong> — no <code>eval</code>, no <code>new Function</code>, no remotely loaded script; the content security policy is <code>script-src 'self'</code>.</li>
         <li><strong>No analytics or telemetry</strong> — no analytics dependency and no reporting code path.</li>
         <li><strong>Session-scoped capture storage</strong> — captured content is written to <code>chrome.storage.session</code> only.</li>

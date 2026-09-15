@@ -64,7 +64,7 @@ instead of the `downloads` permission (`src/extension/sidepanel/download.ts`).
 | Telemetry / analytics | no analytics dependency in `package.json`, no analytics package in the bundle, no event-reporting code path | ABSENT |
 | API key | the extension never asks for, stores or transmits a credential; nothing in the UI requests one | NOT REQUIRED |
 | Secrets | no `.env`, no token, no key material in `src/`, `dist/`, or the ZIP | ABSENT |
-| `dangerouslySetInnerHTML` on page content | `grep` over `src/` → the only occurrence is React's own internal renderer code in the vendored bundle, not application code | NOT USED BY CUE PARSEL |
+| `dangerouslySetInnerHTML` on page content | `grep` over `src/` → the only occurrence is React's own internal renderer code in the vendored bundle, not application code | NOT USED BY CUEPARCEL |
 
 The one `fetch` that appears in `dist/assets/sidepanel.js` is Vite's
 module-preload polyfill, which calls `fetch` on same-extension
@@ -346,10 +346,11 @@ adapter is covered by its fixture unit tests, but no live `github.com/.../pull/N
 page was captured in Edge during this QA. Claimed as NOT TESTED rather than
 implied.
 
-**QA-LIMIT-04: no outbound-request inspection was performed.** The "no network
-requests" claim rests on the static audit in §3 (no network APIs exist in the
-source or the bundle), not on watching the service worker's Network panel. A
-reviewer following `certification-notes.md` can watch that panel; this pack did not.
+**QA-LIMIT-04: no outbound-request inspection was performed.** The "no outbound
+requests to external services" claim rests on the static audit in §3 (no
+application-authored network calls; the bundle's only `fetch` is Vite's
+same-extension module-preload helper), not on watching the service worker's Network
+panel. A reviewer following `certification-notes.md` can watch that panel; this pack did not.
 
 **QA-LIMIT-05: Edge's own UI surfaces were not painted.** Chromium's extension
 management page (`edge://extensions`) and the Extensions menu were not screenshotted
