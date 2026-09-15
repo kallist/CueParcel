@@ -1139,15 +1139,26 @@ describe("documentation links", () => {
     expect(problems, `links to the pre-rename repository:\n${problems.join("\n")}`).toEqual([]);
   });
 
-  it("does not advertise a release download that does not exist yet", () => {
+  it("advertises the published release download and never claims it is missing", () => {
     /**
-     * The README must not tell users to download a release asset while the
-     * repository has no releases. Checked as text rather than over the network so
-     * the test stays offline and deterministic; it pins the wording the README
-     * actually uses.
+     * v1.1.0 is published, so the READMEs must point at it — and must never go
+     * back to claiming a release does not exist. Checked as text rather than over
+     * the network so the test stays offline and deterministic; it pins the wording
+     * the READMEs actually use.
      */
-    expect(README).not.toMatch(/Download `cueparcel-v[\d.]+-chromium\.zip` from/i);
-    expect(README).toMatch(/there is no downloadable release yet|once a release exists/i);
+    expect(README).toMatch(/https:\/\/github\.com\/kallist\/CueParcel\/releases\/tag\/v[\d.]+/);
+    expect(README).toMatch(/cueparcel-v[\d.]+-chromium\.zip/);
+    for (const [name, markdown] of [
+      ["README.md", README],
+      ["README_ZH.md", README_ZH],
+    ] as const) {
+      expect(markdown, `${name} still claims the release does not exist`).not.toMatch(
+        /there is no downloadable release yet|first release is being prepared|once a release exists/i,
+      );
+      expect(markdown, `${name} does not link the published release`).toMatch(
+        /releases\/tag\/v[\d.]+/,
+      );
+    }
   });
 });
 
