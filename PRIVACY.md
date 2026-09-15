@@ -1,7 +1,7 @@
 # CueParcel Privacy Policy
 
 **Applies to:** the CueParcel browser extension, version 1.1.0
-**Last updated:** 14 February 2026
+**Last updated:** 15 September 2026
 **Canonical public URL:** <https://kallist.github.io/CueParcel/privacy.html>
 **Source of the published page:** [`site/privacy.html`](site/privacy.html) in this repository
 
