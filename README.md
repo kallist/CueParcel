@@ -19,7 +19,9 @@ choose what you want AI to do, inspect the package, and copy it to any agent.
 
 [English](README.md) · [简体中文](README_ZH.md)
 
-[**Download / Quick Start**](#quick-start) · [**See it in action**](#see-cueparcel-in-action) · [**Why CueParcel**](#why-cueparcel) · [**Privacy**](#privacy--permissions)
+[**Download v1.1.0**](https://github.com/kallist/CueParcel/releases/tag/v1.1.0) · [**View source / Build from source**](https://github.com/kallist/CueParcel)
+
+[Quick Start](#quick-start) · [See it in action](#see-cueparcel-in-action) · [Why CueParcel](#why-cueparcel) · [Privacy](#privacy--permissions)
 
 <img src="docs/assets/cueparcel-hero.png" width="100%" alt="CueParcel Side Panel beside a bug report page: the Context Lens has highlighted an Acceptance Criteria section on the page, and the panel shows the captured source, the Context Cart with a Lens-picked source and a documentation source, and the recipe row">
 
@@ -140,12 +142,12 @@ Each row below compares the same three approaches.
 
 ## Quick Start
 
-CueParcel is not on any extension store yet. **Chrome Web Store and Edge Add-ons
-publication are planned, not shipped.** Separately, a ready-to-install Chromium
-build is already published on GitHub Releases:
-[`cueparcel-v1.1.0-chromium.zip`](https://github.com/kallist/CueParcel/releases/tag/v1.1.0).
+CueParcel is currently distributed through **GitHub Releases**. Browser store
+installation is not available.
 
-Download that release build, or build CueParcel locally — both routes are below.
+[**Download v1.1.0**](https://github.com/kallist/CueParcel/releases/tag/v1.1.0) —
+`cueparcel-v1.1.0-chromium.zip`. You can also build CueParcel from source. Both
+routes are below.
 
 ### A. Download the release and load it unpacked
 
@@ -338,8 +340,8 @@ surprises:
   to equal any model tokenizer.
 - **The preview is plain text**, not rendered Markdown.
 - **No history, no accounts, no sync.** Only session-scoped state is kept.
-- **Not on a store yet.** Chrome Web Store and Edge Add-ons distribution are
-  planned; today installation is the unpacked release above.
+- **Not distributed through browser stores.** Installation is the unpacked GitHub
+  release above, or a local build.
 - **Some surfaces cannot be automated** in CI: the native Side Panel container,
   the toolbar-click `activeTab` grant, and the Extensions-page listing are
   manual QA items.

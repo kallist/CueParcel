@@ -51,7 +51,7 @@ No host permissions. No <all_urls>.
 
 **7/7** — media: `docs/assets/cueparcel-card-fix.png`
 
-Honest limits: not on the Chrome Web Store yet (load the unpacked release), DOM/heuristic extraction so some app-like pages, iframes and PDFs fail, token counts are estimates, preview is plain text, no history or sync.
+Honest limits: GitHub Releases only — download the ZIP and load it unpacked, no browser-store installation, DOM/heuristic extraction so some app-like pages, iframes and PDFs fail, token counts are estimates, preview is plain text, no history or sync.
 
 MIT. v1.1.0.
 
