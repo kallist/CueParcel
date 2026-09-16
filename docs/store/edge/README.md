@@ -1,5 +1,12 @@
 # CueParcel — Microsoft Edge Add-ons submission pack
 
+> **Status: not submitted, and not currently being pursued.** CueParcel is
+> distributed through GitHub Releases only. The Microsoft Edge Add-ons submission
+> described here has been discontinued for now, and no store submission is pending
+> or in progress. These files are kept as a record of the preparation work and as
+> the starting point if that decision is ever revisited — nothing in this
+> directory describes the product's current distribution.
+
 Everything needed to submit **CueParcel 1.1.0** to Microsoft Edge Add-ons through
 Partner Center. Nothing in this directory is a Chrome Web Store asset.
 

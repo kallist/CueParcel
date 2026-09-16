@@ -24,12 +24,11 @@ images in `assets/` are copies of the real captures committed under
 `docs/assets/`.
 
 `privacy.html` is the canonical public policy at
-`https://kallist.github.io/CueParcel/privacy.html`, the URL referenced by the
-extension's store listing. It mirrors `PRIVACY.md` at the repository root, and like
-the landing page it is a static file with no scripting: `tests/unit/packaging/
-launch-packaging.test.ts` asserts that it loads no script, references nothing
-outside this project except the project's own GitHub repository and issue tracker,
-and still states every privacy promise the store submission relies on.
+`https://kallist.github.io/CueParcel/privacy.html`. It mirrors `PRIVACY.md` at the
+repository root, and like the landing page it is a static file with no scripting:
+`tests/unit/packaging/launch-packaging.test.ts` asserts that it loads no script,
+references nothing outside this project except the project's own GitHub repository
+and issue tracker, and still states every privacy promise the policy makes.
 
 ## Why GitHub Actions instead of branch publishing
 
@@ -76,8 +75,8 @@ To reproduce the deployed subpath shape, serve the repository root and open
 
 - No analytics, no telemetry, no tracking pixels, no external requests.
 - No framework, bundler or npm site build.
-- No claim that CueParcel is available on the Chrome Web Store, and no Trending
-  claim.
+- No claim that CueParcel is installed from a browser store, and no Trending
+  claim. GitHub Releases is the distribution channel and the page must say so.
 
 These are enforced by `tests/unit/packaging/launch-packaging.test.ts`, which fails
 the suite if the page gains an external reference or overstates the product.

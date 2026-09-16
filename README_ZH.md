@@ -19,7 +19,9 @@ CueParcel 让你可视化地挑选真正有用的内容、组合多个来源、�
 
 [English](README.md) · [简体中文](README_ZH.md)
 
-[**下载 / 快速开始**](#快速开始) · [**看它实际跑起来**](#看它实际跑起来) · [**为什么要用 CueParcel**](#为什么要用-cueparcel) · [**隐私**](#隐私与权限)
+[**下载 v1.1.0**](https://github.com/kallist/CueParcel/releases/tag/v1.1.0) · [**查看源码 / 从源码构建**](https://github.com/kallist/CueParcel)
+
+[快速开始](#快速开始) · [看它实际跑起来](#看它实际跑起来) · [为什么要用 CueParcel](#为什么要用-cueparcel) · [隐私](#隐私与权限)
 
 <img src="docs/assets/cueparcel-hero.png" width="100%" alt="CueParcel 侧边栏与一个缺陷报告页面并排：Context Lens 已在页面上高亮出 Acceptance Criteria 一节，侧边栏中显示了捕获到的来源、包含一个 Lens 选区和一份文档来源的 Context Cart，以及 recipe 选择区">
 
@@ -127,11 +129,10 @@ CueParcel 让你可视化地挑选真正有用的内容、组合多个来源、�
 
 ## 快速开始
 
-CueParcel 目前还没有上架 Chrome Web Store 或 Edge 扩展商店；**两个商店的发布都还在计划
-中，尚未上架**。不过，可直接加载的 Chromium 构建已经发布在 GitHub Releases 上：
-[`cueparcel-v1.1.0-chromium.zip`](https://github.com/kallist/CueParcel/releases/tag/v1.1.0)。
+CueParcel 目前通过 **GitHub Releases** 正式发布，暂未提供浏览器扩展商店安装。
 
-你可以直接下载这个 release，也可以从源码自行构建 —— 下面两种方式都可用。
+[**下载 v1.1.0**](https://github.com/kallist/CueParcel/releases/tag/v1.1.0) ——
+`cueparcel-v1.1.0-chromium.zip`。你也可以从源码自行构建。下面两种方式都可用。
 
 ### A. 下载 release 并加载已解压扩展
 
@@ -297,8 +298,8 @@ CueParcel 会如实说明它做不到什么。下面这些是已知且有记录�
   tokenizer。
 - **预览是纯文本**，不是渲染后的 Markdown。
 - **没有历史记录、没有账号、没有同步。** 只保留会话级状态。
-- **尚未上架任何商店。** Chrome 应用商店与 Edge 加载项都在计划中；今天只能按上面
-  的方式以解压包安装。
+- **未通过浏览器扩展商店分发。** 安装方式是上面的 GitHub release 解压包，或自行
+  构建。
 - **有些界面无法在 CI 中自动化**：原生侧边栏容器、工具栏点击产生的 `activeTab`
   授权、扩展管理页的列表显示，这三项属于人工 QA 范围。
 

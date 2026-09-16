@@ -6,16 +6,13 @@ committed until it ships.** If you want to influence the order, open an issue.
 
 ## Near term
 
-### Chrome Web Store distribution
-The biggest adoption blocker today is installation friction: the release has to
-be loaded unpacked from `chrome://extensions`. A store listing is planned. It
-requires packaging, store assets, and a privacy-practices review — none of which
-change the runtime behaviour or the permission set.
-
-### Edge Add-ons distribution
-CueParcel is built on the same Chromium extension platform and already targets
-Manifest V3. After the Chrome Web Store listing, an Edge Add-ons submission
-follows the same packaging.
+### Distribution
+CueParcel is distributed through **GitHub Releases**, and that is the official
+installation path today. A release has to be downloaded, unzipped and loaded
+unpacked from `chrome://extensions`, which is real installation friction.
+Browser-store distribution is not available, and no store submission is currently
+planned or in progress. If that changes, this section changes with it — the
+roadmap does not commit to a store listing, and there is no pending submission.
 
 ### Shadow-root capture
 Pages whose article lives inside a shadow root currently return

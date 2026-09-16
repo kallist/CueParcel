@@ -119,13 +119,29 @@ describe("README presentation", () => {
   });
 
   it("states the current install reality instead of implying a store listing", () => {
-    // Chrome Web Store is planned, not shipped. Saying otherwise would be a lie.
-    expect(README).toMatch(/Chrome Web Store[^.]*planned, not shipped/i);
+    /**
+     * Distribution is GitHub Releases only. Neither README may imply that a store
+     * listing exists or is coming: the previous wording ("publication is planned,
+     * not shipped") promised a future store, which is no longer the position.
+     */
+    expect(README).toMatch(/distributed through \*\*GitHub Releases\*\*/i);
     expect(README).toContain("chrome://extensions");
     expect(README).toMatch(/Load unpacked/i);
-    // And it must not claim availability.
+    // It must not claim store availability.
     expect(README).not.toMatch(/available on the Chrome Web Store/i);
     expect(README).not.toMatch(/install from the (Chrome|Edge) Web Store/i);
+    for (const [name, markdown] of [
+      ["README.md", README],
+      ["README_ZH.md", README_ZH],
+    ] as const) {
+      expect(markdown, `${name} does not name GitHub Releases as the channel`).toMatch(/GitHub Releases/);
+      expect(markdown, `${name} still promises store publication`).not.toMatch(
+        /planned, not shipped|publication (is|are) planned|商店的发布都还在计划|都在计划中/i,
+      );
+      expect(markdown, `${name} still claims a submission is pending`).not.toMatch(
+        /store submission is pending|submission is planned|即将上架|上架在即/i,
+      );
+    }
   });
 
   it("keeps the trust strip truthful", () => {
@@ -434,7 +450,8 @@ describe("community and packaging documents", () => {
     expect(release).toMatch(/manifest\.json.*archive root/i);
     expect(release).toMatch(/Do not release on a red or skipped gate/);
     expect(release).toMatch(/SHA256SUMS\.txt/);
-    expect(release).toMatch(/Chrome Web Store: planned, not submitted/i);
+    expect(release).toMatch(/GitHub Releases: this is the official channel/i);
+    expect(release).toMatch(/Browser extension stores: not available/i);
   });
 });
 
@@ -853,7 +870,7 @@ describe("landing page", () => {
      * does not ship itself.
      */
     const allowed =
-      /^https:\/\/github\.com\/kallist\/CueParcel(\/(issues|releases(\/latest)?))?$/;
+      /^https:\/\/github\.com\/kallist\/CueParcel(\/(issues|releases(\/(latest|tag\/v[\d.]+))?))?$/;
     const offenders = [...sources.matchAll(/https?:\/\/[^\s"'<>)]+/g)]
       .map((m) => m[0].replace(/["'`].*$/, ""))
       .filter((url) => !allowed.test(url));
@@ -1148,7 +1165,9 @@ describe("landing page", () => {
       expect(html, `site is missing the permission ${claim}`).toContain(claim);
     }
     expect(html).toMatch(/chrome:\/\/extensions/);
-    expect(html).toMatch(/planned/i);
+    expect(html).toMatch(/distributed through GitHub Releases/i);
+    // And it must not promise a store listing instead.
+    expect(html).not.toMatch(/(store|listing|publication)[^.]{0,40}planned/i);
     expect(html).not.toMatch(/available on the Chrome Web Store/i);
     expect(html).not.toMatch(/github trending/i);
     for (const banned of [/revolutionary/i, /game.?changing/i, /blazing/i, /effortless/i, /seamless/i]) {

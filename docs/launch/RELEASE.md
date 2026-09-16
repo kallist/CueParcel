@@ -132,13 +132,11 @@ Attach `cueparcel-v1.1.0-chromium.zip` and `SHA256SUMS.txt` as release assets.
 
 ## Distribution status
 
-- **GitHub Releases: this is the current channel.**
-- **Chrome Web Store: planned, not submitted.** Submitting requires the store
-  listing assets and a privacy-practices review. When it happens, the ZIP built
-  here is the upload candidate, but the listing's permission justifications must
-  match the manifest exactly.
-- **Edge Add-ons: planned, after the Chrome Web Store.** The same artifact is
-  the candidate.
+- **GitHub Releases: this is the official channel, and the only one.**
+- **Browser extension stores: not available.** CueParcel is not published on the
+  Chrome Web Store or Microsoft Edge Add-ons, and no store submission is currently
+  planned or in progress. The ZIP built here is the artifact any future submission
+  would use, but nothing is pending.
 
 Never describe CueParcel as available on a store before the listing is approved
 and public.

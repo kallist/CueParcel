@@ -14,6 +14,6 @@ You can add more pages into one context, tag each piece by role, and say what yo
 
 Four permissions, no backend, no telemetry, no API key, and it only acts when you click. MIT licensed.
 
-Limits: not on the Chrome Web Store yet (load the unpacked release from GitHub), extraction is heuristic so app-like pages and PDFs may come up empty, token counts are estimates, and the preview is plain text.
+Limits: GitHub Releases is the only channel — download the ZIP, unzip and load it unpacked; browser stores are not available. Extraction is heuristic so app-like pages and PDFs may come up empty, token counts are estimates, and the preview is plain text.
 
 `docs/assets/cueparcel-card-fix.png` shows a bug report turned into task context.
