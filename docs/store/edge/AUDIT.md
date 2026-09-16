@@ -222,10 +222,10 @@ CRLF introduces; ENV-02 records the artifact-ordering requirement.
 | Clean install | `npm ci` | PASS — 238 packages, 0 vulnerabilities |
 | Lint | `npm run lint` | PASS |
 | Types | `npm run typecheck` | PASS |
-| Unit + integration | `npm run test` | PASS — **794 passed across 74 files, 0 failed** (run after the release artifact exists; see ENV-02) |
+| Unit + integration | `npm run test` | PASS — unit and integration tests all green (run after the release artifact exists; see ENV-02) |
 | Build | `npm run build` | PASS — `Build validation PASSED: dist/ is a structurally valid MV3 extension artifact` |
 | Extension E2E | `npm run test:e2e` | PASS — 13 passed / 13 |
-| Combined gate | `npm run verify:all` | PASS — lint, typecheck, 794 unit tests, build and 13 E2E tests all green |
+| Combined gate | `npm run verify:all` | PASS — lint, typecheck, unit tests, build and 13 E2E tests all green |
 | Dependency audit | `npm audit --audit-level=low` | PASS — `found 0 vulnerabilities` |
 | Whitespace / conflict check | `git diff --check origin/main...HEAD` | PASS — clean |
 | Release artifact | SHA-256 of `cueparcel-v1.1.0-chromium.zip` recomputed before and after the whole run | PASS — unchanged, matches `SHA256SUMS.txt` |

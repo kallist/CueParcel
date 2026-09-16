@@ -368,7 +368,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow.
 
 ## Testing
 
-**765 unit / integration / component tests across 74 files, plus 13 browser E2E
+**Comprehensive unit / integration / component test suite, plus 13 browser E2E
 tests — all passing.** No skipped tests, no `continue-on-error`.
 
 - **Unit** — domain, validators, messaging (including all lens messages), cart

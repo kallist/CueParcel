@@ -168,42 +168,48 @@ describe("README presentation", () => {
     expect(README).toMatch(/Not explicitly provided in source/);
   });
 
-  it("states a test count that matches what is actually in the repository", () => {
+  it("states no volatile exact unit-test total", () => {
     /**
-     * The README claims a specific number of tests and files. An earlier revision
-     * claimed the count from `main` (723 / 73) while the branch carrying it had
-     * 759 / 74, which is exactly the kind of stale number that makes every other
-     * claim look unchecked.
-     *
-     * The file count is derived from the test tree, so it cannot drift. The test
-     * count cannot be derived without running the suite, so it is only checked for
-     * shape and for internal consistency with the file count.
+     * An earlier revision claimed a specific unit-test count, and it drifted every
+     * time the suite grew: 723 / 73, then 759 / 74, then 765, then 794. The number
+     * cannot be derived without running the suite, so the READMEs no longer state
+     * one at all — the claim is now the suite's existence, not its size. The
+     * separately reported Playwright E2E figure is small and stable, and stays.
      */
     /**
-     * Vitest runs tests/unit and tests/integration. tests/e2e is Playwright and is
-     * reported separately, so it must not be counted here — including it made this
-     * assertion claim 75 files where the suite reports 74.
+     * Vitest runs tests/unit and tests/integration; tests/e2e is Playwright and is
+     * reported separately. The E2E spec count is stable, so it is the one figure
+     * that can still be pinned to the tree.
      */
-    const testFiles = readdirSync(join(rootDir, "tests"), { recursive: true })
-      .map((entry) => String(entry).split("\\").join("/"))
-      .filter((name) => /\.(test|spec)\.tsx?$/.test(name))
-      .filter((name) => !name.startsWith("e2e/"));
     const e2eFiles = readdirSync(join(rootDir, "tests"), { recursive: true })
       .map((entry) => String(entry).split("\\").join("/"))
       .filter((name) => name.startsWith("e2e/") && /\.(test|spec)\.tsx?$/.test(name));
     expect(e2eFiles.length, "expected exactly one Playwright E2E spec").toBe(1);
-    const claimed = /(\d+)\s+(?:unit \/ integration \/ component )?tests? across (\d+) files/i.exec(README);
-    expect(claimed, "README no longer states a test count").not.toBeNull();
-    const claimedTests = Number(claimed?.[1]);
-    const claimedFiles = Number(claimed?.[2]);
-    expect(claimedFiles, `README claims ${claimedFiles} test files, the tests/ tree has ${testFiles.length}`).toBe(
-      testFiles.length,
-    );
-    // Sanity band: more tests than files, and not a wildly implausible number.
-    expect(claimedTests).toBeGreaterThan(claimedFiles);
-    expect(claimedTests).toBeLessThan(claimedFiles * 40);
-    // The E2E figure is separate and small.
+
+    for (const [name, markdown] of [
+      ["README.md", README],
+      ["README_ZH.md", README_ZH],
+    ] as const) {
+      // No exact unit-test total, in either language.
+      expect(markdown, `${name} states an exact unit-test total`).not.toMatch(
+        /\b\d[\d,]*\s+(?:unit\s*\/\s*integration\s*\/\s*component\s+)?tests?\b/i,
+      );
+      expect(markdown, `${name} states an exact unit-test total (zh)`).not.toMatch(
+        /\d[\d,]*\s*个\s*(?:单元|集成|组件)/,
+      );
+      // And no test-file count either: it moved from 73 to 74 once already.
+      expect(markdown, `${name} states an exact test-file count`).not.toMatch(
+        /\d[\d,]*\s+(?:test\s+)?files\b/i,
+      );
+      expect(markdown, `${name} states an exact test-file count (zh)`).not.toMatch(/\d[\d,]*\s*个文件/);
+      // The suite must still be described, so the claim cannot simply vanish.
+      expect(markdown, `${name} no longer describes the test suite`).toMatch(
+        /(unit\s*\/\s*integration\s*\/\s*component|单元\s*\/\s*集成\s*\/\s*组件)/i,
+      );
+    }
+    // The E2E figure is separate, small and stable.
     expect(README).toMatch(/13 browser E2E/);
+    expect(README_ZH).toMatch(/13 个浏览器 E2E/);
   });
 
   it("contains no fabricated engagement or unsupported marketing claims", () => {
